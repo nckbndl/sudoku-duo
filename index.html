@@ -723,7 +723,7 @@ en: {
   cleared:"Notes filled in", saved:"Your time was saved", raceWait:"Finished! Waiting for the others…",
   mistakeShown:"Removed the wrong numbers.", leaderEmpty:"No times yet — be the first!", loading:"Loading…",
   dbOff:"The leaderboard needs the published page while you're signed in.", coopShort:"co-op",
-  joined:"joined", left:"left", liveCoop:"Live co-op", liveRace:"Live race", restartQ:"Clear all your entries?", sa_tips:"Just send the link — no account or app needed. It works in any browser; on iPhone use Share → Add to Home Screen for an app icon.", sa_liveNeeds:"Live play isn't connected yet.", sa_dbOff:"The shared times list isn't connected yet.", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
+  joined:"joined", left:"left", liveCoop:"Live co-op", liveRace:"Live race", restartQ:"Clear all your entries?", sa_tips:"Just send the link — no account or app needed. It works in any browser; on iPhone use Share → Add to Home Screen for an app icon.", sa_liveNeeds:"Live play isn't connected yet.", sa_dbOff:"The shared times list isn't connected yet.", resumeT:"You've played this puzzle here before", resumeP:"The link has no progress in it — this is your own saved game on this device. Continue, or start with a clean grid?", cont:"Continue", startFresh:"Start fresh", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
   easy:"Leicht", medium:"Mittel", hard:"Schwer", expert:"Experte", custom:"Eigenes Rätsel",
@@ -770,7 +770,7 @@ de: {
   cleared:"Notizen eingetragen", saved:"Deine Zeit wurde gespeichert", raceWait:"Fertig! Warte auf die anderen…",
   mistakeShown:"Falsche Zahlen entfernt.", leaderEmpty:"Noch keine Zeiten — sei die/der Erste!", loading:"Lädt…",
   dbOff:"Die Bestenliste braucht die veröffentlichte Seite und eine Anmeldung.", coopShort:"Koop",
-  joined:"ist da", left:"ist weg", liveCoop:"Live-Koop", liveRace:"Live-Rennen", restartQ:"Alle Einträge löschen?", sa_tips:"Schick einfach den Link — kein Konto, keine App nötig. Läuft in jedem Browser; auf dem iPhone über Teilen → Zum Home-Bildschirm als App-Symbol.", sa_liveNeeds:"Live-Spielen ist noch nicht verbunden.", sa_dbOff:"Die gemeinsame Zeitenliste ist noch nicht verbunden.", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
+  joined:"ist da", left:"ist weg", liveCoop:"Live-Koop", liveRace:"Live-Rennen", restartQ:"Alle Einträge löschen?", sa_tips:"Schick einfach den Link — kein Konto, keine App nötig. Läuft in jedem Browser; auf dem iPhone über Teilen → Zum Home-Bildschirm als App-Symbol.", sa_liveNeeds:"Live-Spielen ist noch nicht verbunden.", sa_dbOff:"Die gemeinsame Zeitenliste ist noch nicht verbunden.", resumeT:"Dieses Rätsel hast du hier schon gespielt", resumeP:"Im Link ist kein Spielstand — das ist dein eigener gespeicherter Stand auf diesem Gerät. Weiterspielen oder mit leerem Gitter neu beginnen?", cont:"Weiterspielen", startFresh:"Neu beginnen", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
 var BOXPOS = {
@@ -1405,9 +1405,20 @@ function openCode(raw, quiet) {
     if (o.elims) g.elims = o.elims;
     g.clock = 1;
   }
-  if (o.time) g.chal = { ms: o.time, name: o.name || "", h: o.hints == null ? null : o.hints, m: o.mist == null ? null : o.mist };
+  var resumed = !o.vals && g.vals && (g.vals.some(Boolean) || g.notes.some(Boolean) || g.done);
+  var chal = o.time ? { ms: o.time, name: o.name || "", h: o.hints == null ? null : o.hints, m: o.mist == null ? null : o.mist } : null;
+  if (chal) g.chal = chal;
   setGame(g);
   toast(t("opened"));
+  if (resumed && !o.live) modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("resumeT") }));
+    sh.appendChild(el("p", { text: t("resumeP") }));
+    sh.appendChild(el("div", { class: "grid2" }, [
+      el("button", { class: "btn", text: t("cont"), onclick: closeModal }),
+      el("button", { class: "btn pri", text: t("startFresh"), onclick: function () {
+        closeModal(); var f = fresh(g.giv, g.sol, g.diff, g.label); f.chal = chal; setGame(f);
+      } })]));
+  });
   if (o.live) whenCaps(function () { startLive(o.live, true); });
   return true;
 }
