@@ -1356,7 +1356,7 @@ function encode(o) {
     if (G.notes.some(function (n, i) { return n && !curVal(i); })) s += "-n" + G.notes.map(function (n, i) { return (curVal(i) ? 0 : n).toString(36).padStart(2, "0"); }).join("");
     if (G.elims.length) s += "-x" + G.elims.map(function (e) { return e[0].toString(36).padStart(2, "0") + e[1]; }).join("");
   }
-  if (o.time) s += "-t" + Math.round(o.time).toString(36);
+  if (o.time) s += "-t" + Math.round(o.time).toString(36) + "-h" + (G.hints || 0).toString(36) + "-m" + (G.mist || 0).toString(36);
   var nm = (S.name || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
   if (o.time && nm) s += "-a" + nm;
   if (o.live) s += "-l" + (o.live === "coop" ? "c" : "r");
@@ -1382,6 +1382,8 @@ function parseCode(raw) {
     else if (k === "n" && v.length === 162) { o.notes = []; for (var i = 0; i < 81; i++) o.notes.push((parseInt(v.substr(i * 2, 2), 36) || 0) & 511); }
     else if (k === "x" && v.length % 3 === 0) { o.elims = []; for (var j = 0; j < v.length; j += 3) { var c = parseInt(v.substr(j, 2), 36), d = +v[j + 2]; if (c >= 0 && c < 81 && d >= 1 && d <= 9) o.elims.push([c, d]); } }
     else if (k === "t") o.time = parseInt(v, 36);
+    else if (k === "h" && /^[0-9a-z]+$/.test(v)) o.hints = parseInt(v, 36);
+    else if (k === "m" && /^[0-9a-z]+$/.test(v)) o.mist = parseInt(v, 36);
     else if (k === "a") o.name = v.slice(0, 16);
     else if (k === "l") o.live = v === "c" ? "coop" : v === "r" ? "race" : null;
     else if (k === "q" && /^\d{4}$/.test(v)) o.label = t("daily") + " " + v.slice(2) + "." + v.slice(0, 2);
@@ -1403,7 +1405,7 @@ function openCode(raw, quiet) {
     if (o.elims) g.elims = o.elims;
     g.clock = 1;
   }
-  if (o.time) g.chal = { ms: o.time, name: o.name || "" };
+  if (o.time) g.chal = { ms: o.time, name: o.name || "", h: o.hints == null ? null : o.hints, m: o.mist == null ? null : o.mist };
   setGame(g);
   toast(t("opened"));
   if (o.live) whenCaps(function () { startLive(o.live, true); });
@@ -1636,6 +1638,13 @@ function showWin() {
     if (G.chal) {
       var diff = G.el - G.chal.ms;
       sh.appendChild(el("div", { class: "banner" }, [diff < 0 ? "🏆 " + t("youWon", { t: fmt(-diff) }) : "⏱️ " + t("youLost", { t: fmt(diff) })]));
+      if (G.chal.h != null) {
+        var ct = el("table");
+        ct.appendChild(el("tr", null, [el("th"), el("th", { class: "n", text: t("time") }), el("th", { class: "n", text: "💡 " + t("hintsUsed") }), el("th", { class: "n", text: t("mistakes") })]));
+        ct.appendChild(el("tr", null, [el("td", { text: t("you") }), el("td", { class: "n", text: fmt(G.el) }), el("td", { class: "n", text: String(G.hints) }), el("td", { class: "n", text: String(G.mist) })]));
+        ct.appendChild(el("tr", null, [el("td", { text: G.chal.name || "🎯" }), el("td", { class: "n", text: fmt(G.chal.ms) }), el("td", { class: "n", text: String(G.chal.h) }), el("td", { class: "n", text: G.chal.m == null ? "–" : String(G.chal.m) })]));
+        sh.appendChild(ct);
+      }
     }
     if (LIVE && LIVE.mode === "race") sh.appendChild(raceTable());
     sh.appendChild(el("div", { class: "stack", style: "margin-top:12px" }, [
@@ -1711,7 +1720,7 @@ function publishPresence() {
   } else {
     var filled = 0, total = 0;
     for (var i = 0; i < 81; i++) if (!G.giv[i]) { total++; if (G.vals[i] === G.sol[i]) filled++; }
-    p = { mode: "race", pid: G.pid, uid: MYID, ready: !!LIVE.ready, phase: LIVE.phase, filled: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : filled, total: total, doneMs: LIVE.phase === "done" ? Math.round(G.el) : null };
+    p = { mode: "race", pid: G.pid, uid: MYID, ready: !!LIVE.ready, phase: LIVE.phase, filled: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : filled, total: total, doneMs: LIVE.phase === "done" ? Math.round(G.el) : null, hints: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : (G.hints || 0) };
   }
   LIVE.r.presence(p).catch(function () {});
 }
@@ -1772,12 +1781,13 @@ function startCountdown() {
   step();
 }
 function raceTable() {
-  var rows = [{ me: true, by: MYID, ms: LIVE.phase === "done" ? G.el : null, filled: null }];
-  livePeers().forEach(function (p) { rows.push({ by: p.by || p.presence.uid, ms: p.presence.doneMs, filled: p.presence.filled, total: p.presence.total }); });
+  var rows = [{ me: true, by: MYID, ms: LIVE.phase === "done" ? G.el : null, filled: null, h: G.hints || 0 }];
+  livePeers().forEach(function (p) { rows.push({ by: p.by || p.presence.uid, ms: p.presence.doneMs, filled: p.presence.filled, total: p.presence.total, h: p.presence.hints || 0 }); });
   rows.sort(function (a, b) { return (a.ms || 1e12) - (b.ms || 1e12); });
   var tb = el("table");
   rows.forEach(function (r, i) {
     tb.appendChild(el("tr", null, [el("td", { text: (r.ms ? ["🥇", "🥈", "🥉"][i] || "" : "") + " " + (r.me ? t("you") : nameOf(r.by)) }),
+      el("td", { class: "n", text: "💡" + r.h }),
       el("td", { class: "n", text: r.ms ? fmt(r.ms) : (r.total ? Math.round(100 * r.filled / r.total) + "%" : "…") })]));
   });
   return tb;
@@ -1792,6 +1802,7 @@ function renderPeers() {
   others.forEach(function (p) {
     var pr = p.presence, kids = [el("span", { class: "dot", style: "background:" + peerColor(p.peer) }), nameOf(p.by || pr.uid)];
     if (LIVE.mode === "race") {
+      if (pr.phase !== "lobby" && pr.hints) kids.push(el("span", { class: "legend", text: "💡" + pr.hints }));
       if (pr.doneMs) kids.push(" ✓ " + fmt(pr.doneMs));
       else if (pr.phase === "lobby") kids.push(pr.ready ? " ✓" : " …");
       else { var b = el("span", { class: "bar" }, [el("i", { style: "width:" + Math.round(100 * (pr.filled || 0) / (pr.total || 1)) + "%" })]); kids.push(b); }
@@ -1837,7 +1848,7 @@ function showLeaderboard() {
     sh.appendChild(el("p", { text: (G.label ? G.label + " · " : "") + diffName(G.diff) }));
     var body = el("div", { text: t("loading") }); sh.appendChild(body);
     var rows = [];
-    if (G.chal) rows.push({ name: G.chal.name || "🎯", ms: G.chal.ms, h: null });
+    if (G.chal) rows.push({ name: G.chal.name || "🎯", ms: G.chal.ms, h: G.chal.h });
     var draw = function (note) {
       body.innerHTML = "";
       if (note) body.appendChild(el("p", { text: note }));
@@ -1871,7 +1882,7 @@ function renderBanner() {
   var b = $("#banner"); b.innerHTML = "";
   if (G && !G.entry && G.chal && !G.done) {
     b.classList.remove("hidden");
-    b.appendChild(el("span", { text: "⏱️ " + (G.chal.name ? t("beatItN", { n: G.chal.name, t: fmt(G.chal.ms) }) : t("beatIt", { t: fmt(G.chal.ms) })) }));
+    b.appendChild(el("span", { text: "⏱️ " + (G.chal.name ? t("beatItN", { n: G.chal.name, t: fmt(G.chal.ms) }) : t("beatIt", { t: fmt(G.chal.ms) })) + (G.chal.h != null ? " (💡 " + t("hintsUsed") + ": " + G.chal.h + ")" : "") }));
     b.appendChild(el("button", { class: "x", text: "×", onclick: function () { b.classList.add("hidden"); } }));
   } else b.classList.add("hidden");
 }
