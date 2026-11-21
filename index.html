@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sudoku Duo">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Sudoku Duo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4efe6; --panel:#fffdf8; --ink:#23212b; --muted:#6f6a78; --line:#2b2934; --thin:#d8d1c3;
+  --given:#23212b; --user:#2d58cf; --note:#6d6879; --accent:#d9603a; --accent-ink:#fff;
+  --hl:#efe8db; --same:#fbdcbc; --sel:#ffd27a; --err:#d2393a; --err-bg:#fcdedb;
+  --pat:#cfe0ff; --tgt:#ffd3c9; --colA:#bfe3c6; --colB:#cfd6ff; --ok:#2f8f5b;
+  --shadow:0 10px 30px rgba(40,30,20,.12); --r:14px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#15141a; --panel:#1f1e26; --ink:#efebe4; --muted:#a29dab; --line:#e6e1d8; --thin:#3b3945;
+  --given:#f3efe8; --user:#8fb1ff; --note:#a7a2b0; --accent:#f07a52; --accent-ink:#1a1210;
+  --hl:#2a2832; --same:#5a3d26; --sel:#7a5a14; --err:#ff7a70; --err-bg:#4a2422;
+  --pat:#24385e; --tgt:#5a2a22; --colA:#1f4a2c; --colB:#2b3170; --ok:#5fd18f;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,sans-serif}
+body{min-height:100vh;display:flex;justify-content:center}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.app{width:100%;max-width:560px;padding:10px 12px 18px;display:flex;flex-direction:column;gap:10px}
+header{display:flex;align-items:center;gap:10px}
+.brand{font-family:"Fraunces",Georgia,serif;font-weight:700;font-size:22px;letter-spacing:-.3px;flex:1;white-space:nowrap}
+.brand b{color:var(--accent)}
+.pill{font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--panel);color:var(--muted);border:1px solid var(--thin);white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.timer{font-variant-numeric:tabular-nums;font-weight:700;font-size:16px;display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:99px;background:var(--panel);border:1px solid var(--thin)}
+.timer svg{width:14px;height:14px}
+.menub{width:38px;height:38px;border-radius:12px;background:var(--panel);border:1px solid var(--thin);display:flex;align-items:center;justify-content:center;flex:none}
+.menub svg{width:20px;height:20px;stroke:var(--ink)}
+@media (max-width:400px){.brand{font-size:19px}.pill{max-width:110px}}
+.banner{background:var(--panel);border:1px solid var(--thin);border-radius:var(--r);padding:9px 12px;font-size:14px;display:flex;gap:10px;align-items:center}
+.banner .x{margin-left:auto;color:var(--muted);font-size:18px;padding:0 4px}
+.peers{display:flex;flex-wrap:wrap;gap:6px}
+.peer{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--thin);border-radius:99px;padding:4px 10px 4px 6px;font-size:13px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.bar{width:60px;height:6px;border-radius:9px;background:var(--hl);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.boardwrap{position:relative;align-self:center;width:min(100%, 72vh, 540px)}
+.board{display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);user-select:none;touch-action:manipulation}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);font-size:clamp(18px,5.6vw,32px);font-weight:500;color:var(--user);cursor:pointer;transition:background .12s}
+.cell:nth-child(9n){border-right:0}
+.cell:nth-child(9n+3),.cell:nth-child(9n+6){border-right:2px solid var(--line)}
+.cell.r2,.cell.r5{border-bottom:2px solid var(--line)}
+.cell.r8{border-bottom:0}
+.cell.given{color:var(--given);font-weight:700}
+.cell.hl{background:var(--hl)}
+.cell.same{background:var(--same)}
+.cell.sel{background:var(--sel)}
+.cell.err{color:var(--err)}
+.cell.err.given{color:var(--given)}
+.cell.errbg{background:var(--err-bg)}
+.cell.pat{background:var(--pat)}
+.cell.tgt{background:var(--tgt)}
+.cell.cA{background:var(--colA)}
+.cell.cB{background:var(--colB)}
+.cell .ring{position:absolute;inset:1px;border:2.5px solid var(--pc);border-radius:4px;pointer-events:none}
+.notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+.notes span{display:flex;align-items:center;justify-content:center;font-size:clamp(8px,2.3vw,13px);color:var(--note);font-weight:600;line-height:1;border-radius:3px}
+.notes span.nm{background:var(--accent);color:var(--accent-ink)}
+.notes span.ne{color:var(--err);text-decoration:line-through;font-weight:800}
+.notes span.np{color:var(--ok);font-weight:800}
+.cover{position:absolute;inset:0;border-radius:10px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px;z-index:3}
+.cover h2{font-family:"Fraunces",serif;margin:0;font-size:26px}
+.cover p{margin:0;color:var(--muted);max-width:320px}
+.count{font-family:"Fraunces",serif;font-size:72px;font-weight:700;color:var(--accent)}
+.tools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;border-radius:12px;font-size:12px;font-weight:600;color:var(--muted);position:relative}
+.tool svg{width:24px;height:24px;stroke:var(--ink)}
+.tool:active{background:var(--hl)}
+.tool.on{color:var(--accent)}
+.tool.on svg{stroke:var(--accent)}
+.tool .badge{position:absolute;top:2px;right:calc(50% - 26px);font-size:10px;background:var(--accent);color:var(--accent-ink);border-radius:9px;padding:1px 6px}
+.pad{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}
+.num{aspect-ratio:.8;border-radius:12px;background:var(--panel);border:1px solid var(--thin);font-size:clamp(22px,6.4vw,30px);font-weight:600;color:var(--user);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;box-shadow:0 2px 0 var(--thin)}
+.num small{font-size:10px;color:var(--muted);font-weight:600;margin-top:3px}
+.num:active{transform:translateY(1px);box-shadow:none}
+.num.full{opacity:.28}
+.notesmode .num{color:var(--note);font-size:clamp(15px,4.6vw,20px)}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.navb{background:var(--panel);border:1px solid var(--thin);border-radius:12px;padding:10px 4px;font-size:13px;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:4px}
+.navb svg{width:20px;height:20px;stroke:var(--accent)}
+.hint{background:var(--panel);border:1px solid var(--thin);border-left:4px solid var(--accent);border-radius:var(--r);padding:12px 14px;box-shadow:var(--shadow)}
+.hint h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+.hint h3 .lv{font-size:11px;color:var(--muted);font-weight:600;margin-left:auto}
+.hint p{margin:6px 0;font-size:14.5px;line-height:1.45}
+.hint .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.btn{padding:9px 14px;border-radius:10px;font-weight:700;font-size:14px;background:var(--hl);border:1px solid var(--thin)}
+.btn.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.block{width:100%;padding:13px}
+.btn:disabled{opacity:.5}
+.legend{font-size:12px;color:var(--muted)}
+.overlay{position:fixed;inset:0;background:rgba(10,8,14,.45);display:flex;align-items:flex-end;justify-content:center;z-index:20;animation:fade .15s}
+@media (min-width:640px){.overlay{align-items:center}}
+.sheet{background:var(--panel);width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:20px 20px 0 0;padding:18px 18px 24px;box-shadow:var(--shadow);animation:up .2s}
+@media (min-width:640px){.sheet{border-radius:20px}}
+.sheet h2{font-family:"Fraunces",serif;margin:0 0 4px;font-size:24px}
+.sheet h4{margin:18px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.sheet p{color:var(--muted);margin:4px 0 10px;font-size:14px;line-height:1.45}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--thin);text-align:left}
+.choice b{font-size:15px}
+.choice span{font-size:12px;color:var(--muted)}
+.choice.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.stack{display:flex;flex-direction:column;gap:8px}
+input[type=text],textarea,select{width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--thin);background:var(--bg);color:var(--ink)}
+textarea{font-family:ui-monospace,monospace;font-size:12px;height:70px;resize:none;word-break:break-all}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--thin);font-size:15px}
+.setrow select{width:auto}
+.switch{width:46px;height:28px;border-radius:99px;background:var(--thin);position:relative;flex:none}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.15s}
+.switch.on{background:var(--accent)}
+.switch.on::after{left:21px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:8px 4px;border-bottom:1px solid var(--thin);text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+.big{font-family:"Fraunces",serif;font-size:44px;font-weight:700;text-align:center;margin:6px 0}
+.center{text-align:center}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;font-weight:600;z-index:30;box-shadow:var(--shadow);animation:up .2s;max-width:90vw;text-align:center}
+.spin{width:38px;height:38px;border:4px solid var(--thin);border-top-color:var(--accent);border-radius:50%;animation:rot .8s linear infinite}
+.entrybar{display:flex;gap:8px;align-items:center;background:var(--panel);border:1px dashed var(--accent);border-radius:var(--r);padding:10px 12px;font-size:14px}
+.entrybar span{flex:1;font-size:13px;line-height:1.3}
+@keyframes rot{to{transform:rotate(360deg)}}
+@keyframes up{from{transform:translateY(20px);opacity:0}}
+@keyframes fade{from{opacity:0}}
+@keyframes pop{50%{transform:scale(1.12)}}
+.win .cell{animation:pop .5s ease both}
+.hidden{display:none!important}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">Sudoku <b>Duo</b></div>
+    <div class="pill" id="pill"></div>
+    <button class="timer" id="timerBtn" aria-label="Pause">
+      <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+      <svg id="playIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>
+      <span id="time">0:00</span>
+    </button>
+    <button class="menub" id="bMenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+  <div class="banner hidden" id="banner"></div>
+  <div class="peers hidden" id="peers"></div>
+  <div class="entrybar hidden" id="entrybar">
+    <span data-t="enterT"></span>
+    <button class="btn" id="ePaste">⌨︎</button>
+    <button class="btn" id="eCancel" data-t="cancel"></button>
+    <button class="btn pri" id="eStart" data-t="start"></button>
+  </div>
+  <div class="boardwrap">
+    <div class="board" id="board"></div>
+    <div class="cover hidden" id="cover"></div>
+  </div>
+  <div class="hint hidden" id="hint"></div>
+  <div class="tools" id="tools">
+    <button class="tool" id="tUndo"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span data-t="undo"></span></button>
+    <button class="tool" id="tErase"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg><span data-t="erase"></span></button>
+    <button class="tool" id="tNotes"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span data-t="notes"></span></button>
+    <button class="tool" id="tHint"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V17h6v-.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z"/></svg><span data-t="hint"></span><span class="badge hidden" id="hintBadge"></span></button>
+  </div>
+  <div class="pad" id="pad"></div>
+</div>
+<script id="engine">
+var SE = (function () {
+  "use strict";
+  var ROW = [], COL = [], BOX = [], UNITS = [], PEERS = [], SEES = [];
+  for (var u = 0; u < 27; u++) UNITS.push([]);
+  for (var i = 0; i < 81; i++) {
+    var r = (i / 9) | 0, c = i % 9, b = ((r / 3) | 0) * 3 + ((c / 3) | 0);
+    ROW[i] = r; COL[i] = c; BOX[i] = b;
+    UNITS[r].push(i); UNITS[9 + c].push(i); UNITS[18 + b].push(i);
+  }
+  for (i = 0; i < 81; i++) {
+    var s = {};
+    [ROW[i], 9 + COL[i], 18 + BOX[i]].forEach(function (uu) {
+      UNITS[uu].forEach(function (j) { if (j !== i) s[j] = 1; });
+    });
+    PEERS[i] = Object.keys(s).map(Number);
+    SEES[i] = new Uint8Array(81);
+    PEERS[i].forEach(function (j) { SEES[i][j] = 1; });
+  }
+  var PC = new Uint8Array(512), DIGS = [];
+  for (var m = 0; m < 512; m++) {
+    var l = [];
+    for (var d = 1; d <= 9; d++) if (m & (1 << (d - 1))) l.push(d);
+    PC[m] = l.length; DIGS.push(l);
+  }
+  function bit(d) { return 1 << (d - 1); }
+
+  // ---------- seeded RNG ----------
+  function hashStr(str) {
+    var h = 1779033703 ^ str.length;
+    for (var k = 0; k < str.length; k++) {
+      h = Math.imul(h ^ str.charCodeAt(k), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    };
+  }
+  function makeRng(seed) {
+    var a = hashStr(String(seed))();
+    return function () {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(a, rand) {
+    for (var k = a.length - 1; k > 0; k--) {
+      var j = Math.floor(rand() * (k + 1)), t = a[k]; a[k] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  // ---------- brute-force solver (counts solutions) ----------
+  function solve(grid, limit, rand) {
+    var g = grid.slice(), rm = new Int32Array(9), cm = new Int32Array(9), bm = new Int32Array(9);
+    for (var k = 0; k < 81; k++) if (g[k]) {
+      var bb = bit(g[k]);
+      if ((rm[ROW[k]] | cm[COL[k]] | bm[BOX[k]]) & bb) return { count: 0 };
+      rm[ROW[k]] |= bb; cm[COL[k]] |= bb; bm[BOX[k]] |= bb;
+    }
+    var count = 0, sol = null;
+    function rec() {
+      var best = -1, bestM = 0, bestN = 10;
+      for (var k = 0; k < 81; k++) if (!g[k]) {
+        var mm = 511 & ~(rm[ROW[k]] | cm[COL[k]] | bm[BOX[k]]), n = PC[mm];
+        if (n === 0) return false;
+        if (n < bestN) { bestN = n; best = k; bestM = mm; if (n === 1) break; }
+      }
+      if (best < 0) { count++; if (!sol) sol = g.slice(); return count >= limit; }
+      var ds = DIGS[bestM]; if (rand) ds = shuffle(ds.slice(), rand);
+      for (var q = 0; q < ds.length; q++) {
+        var dd = ds[q], b2 = bit(dd), r = ROW[best], c = COL[best], x = BOX[best];
+        g[best] = dd; rm[r] |= b2; cm[c] |= b2; bm[x] |= b2;
+        if (rec()) return true;
+        g[best] = 0; rm[r] &= ~b2; cm[c] &= ~b2; bm[x] &= ~b2;
+      }
+      return false;
+    }
+    rec();
+    return { count: count, solution: sol };
+  }
+
+  // ---------- logical solver ----------
+  function newState(values) {
+    var v = values.slice(), c = new Int32Array(81);
+    for (var k = 0; k < 81; k++) c[k] = v[k] ? 0 : 511;
+    for (k = 0; k < 81; k++) if (v[k]) {
+      var bb = ~bit(v[k]);
+      for (var p = 0; p < 20; p++) c[PEERS[k][p]] &= bb;
+    }
+    return { v: v, c: c };
+  }
+  function place(st, k, d) {
+    st.v[k] = d; st.c[k] = 0; var bb = ~bit(d);
+    for (var p = 0; p < 20; p++) st.c[PEERS[k][p]] &= bb;
+  }
+  function applyStep(st, step) {
+    if (step.place) step.place.forEach(function (pd) { place(st, pd[0], pd[1]); });
+    if (step.elim) step.elim.forEach(function (pd) { st.c[pd[0]] &= ~bit(pd[1]); });
+  }
+  function combos(arr, n, fn) {
+    var idx = [];
+    (function go(start) {
+      if (idx.length === n) return fn(idx.map(function (q) { return arr[q]; }));
+      for (var q = start; q < arr.length; q++) {
+        idx.push(q); var res = go(q + 1); idx.pop();
+        if (res) return res;
+      }
+      return null;
+    })(0);
+    return null;
+  }
+  function combosRet(arr, n, fn) {
+    var out = null, idx = [];
+    (function go(start) {
+      if (out) return;
+      if (idx.length === n) { out = fn(idx.map(function (q) { return arr[q]; })) || null; return; }
+      for (var q = start; q < arr.length && !out; q++) { idx.push(q); go(q + 1); idx.pop(); }
+    })(0);
+    return out;
+  }
+  var UNIT_ORDER = [];
+  for (u = 18; u < 27; u++) UNIT_ORDER.push(u);
+  for (u = 0; u < 18; u++) UNIT_ORDER.push(u);
+
+  var T = {};
+  T.hiddenSingle = function (st) {
+    for (var q = 0; q < 27; q++) {
+      var un = UNITS[UNIT_ORDER[q]];
+      for (var d = 1; d <= 9; d++) {
+        var bb = bit(d), pos = -1, n = 0;
+        for (var k = 0; k < 9; k++) if (st.c[un[k]] & bb) { n++; pos = un[k]; }
+        if (n === 1) return { t: "hiddenSingle", lvl: 1, d: d, unit: UNIT_ORDER[q], cells: [pos], place: [[pos, d]] };
+      }
+    }
+    return null;
+  };
+  T.nakedSingle = function (st) {
+    for (var k = 0; k < 81; k++) if (!st.v[k] && PC[st.c[k]] === 1)
+      return { t: "nakedSingle", lvl: 1, d: DIGS[st.c[k]][0], cells: [k], place: [[k, DIGS[st.c[k]][0]]] };
+    return null;
+  };
+  T.lockedCandidates = function (st) {
+    var b, d, k;
+    for (b = 18; b < 27; b++) for (d = 1; d <= 9; d++) {
+      var bb = bit(d), cells = UNITS[b].filter(function (x) { return st.c[x] & bb; });
+      if (cells.length < 2) continue;
+      var lines = [[ROW, 0], [COL, 9]];
+      for (var L = 0; L < 2; L++) {
+        var A = lines[L][0], line = A[cells[0]];
+        if (cells.every(function (x) { return A[x] === line; })) {
+          var un = UNITS[lines[L][1] + line], el = [];
+          for (k = 0; k < 9; k++) if (BOX[un[k]] !== b - 18 && (st.c[un[k]] & bb)) el.push([un[k], d]);
+          if (el.length) return { t: "pointing", lvl: 2, d: d, unit: b, unit2: lines[L][1] + line, cells: cells, elim: el };
+        }
+      }
+    }
+    for (var uu = 0; uu < 18; uu++) for (d = 1; d <= 9; d++) {
+      bb = bit(d); cells = UNITS[uu].filter(function (x) { return st.c[x] & bb; });
+      if (cells.length < 2) continue;
+      var bx = BOX[cells[0]];
+      if (cells.every(function (x) { return BOX[x] === bx; })) {
+        var el2 = [];
+        UNITS[18 + bx].forEach(function (x) {
+          if ((st.c[x] & bb) && cells.indexOf(x) < 0) el2.push([x, d]);
+        });
+        if (el2.length) return { t: "claiming", lvl: 2, d: d, unit: uu, unit2: 18 + bx, cells: cells, elim: el2 };
+      }
+    }
+    return null;
+  };
+  function nakedSubset(n, lvl, name) {
+    return function (st) {
+      for (var q = 0; q < 27; q++) {
+        var uu = UNIT_ORDER[q], un = UNITS[uu];
+        var cand = un.filter(function (x) { return !st.v[x] && PC[st.c[x]] >= 2 && PC[st.c[x]] <= n; });
+        if (cand.length < n) continue;
+        var res = combosRet(cand, n, function (cs) {
+          var mm = 0; cs.forEach(function (x) { mm |= st.c[x]; });
+          if (PC[mm] !== n) return null;
+          var el = [];
+          un.forEach(function (x) {
+            if (cs.indexOf(x) < 0 && (st.c[x] & mm)) DIGS[st.c[x] & mm].forEach(function (dd) { el.push([x, dd]); });
+          });
+          if (!el.length) return null;
+          return { t: name, lvl: lvl, unit: uu, cells: cs.slice(), digits: DIGS[mm], elim: el };
+        });
+        if (res) return res;
+      }
+      return null;
+    };
+  }
+  function hiddenSubset(n, lvl, name) {
+    return function (st) {
+      for (var q = 0; q < 27; q++) {
+        var uu = UNIT_ORDER[q], un = UNITS[uu], digs = [], posMask = {};
+        for (var d = 1; d <= 9; d++) {
+          var ps = un.filter(function (x) { return st.c[x] & bit(d); });
+          if (ps.length >= 2 && ps.length <= n) { digs.push(d); posMask[d] = ps; }
+        }
+        if (digs.length < n) continue;
+        var res = combosRet(digs, n, function (ds) {
+          var set = {};
+          ds.forEach(function (dd) { posMask[dd].forEach(function (x) { set[x] = 1; }); });
+          var cells = Object.keys(set).map(Number);
+          if (cells.length !== n) return null;
+          var dm = 0; ds.forEach(function (dd) { dm |= bit(dd); });
+          var el = [];
+          cells.forEach(function (x) { DIGS[st.c[x] & ~dm].forEach(function (dd) { el.push([x, dd]); }); });
+          if (!el.length) return null;
+          return { t: name, lvl: lvl, unit: uu, cells: cells, digits: ds.slice(), elim: el };
+        });
+        if (res) return res;
+      }
+      return null;
+    };
+  }
+  function fish(n, lvl, name) {
+    return function (st) {
+      for (var d = 1; d <= 9; d++) {
+        var bb = bit(d);
+        for (var dir = 0; dir < 2; dir++) {
+          var base = dir === 0 ? 0 : 9, cover = dir === 0 ? 9 : 0, lines = [], pos = {};
+          for (var L = 0; L < 9; L++) {
+            var ps = UNITS[base + L].filter(function (x) { return st.c[x] & bb; });
+            if (ps.length >= 2 && ps.length <= n) {
+              lines.push(L);
+              pos[L] = ps.map(function (x) { return dir === 0 ? COL[x] : ROW[x]; });
+            }
+          }
+          if (lines.length < n) continue;
+          var res = combosRet(lines, n, function (ls) {
+            var cs = {};
+            ls.forEach(function (L2) { pos[L2].forEach(function (cc) { cs[cc] = 1; }); });
+            var covers = Object.keys(cs).map(Number);
+            if (covers.length !== n) return null;
+            var el = [], cells = [];
+            covers.forEach(function (cv) {
+              UNITS[cover + cv].forEach(function (x) {
+                var lineOf = dir === 0 ? ROW[x] : COL[x];
+                if (st.c[x] & bb) {
+                  if (ls.indexOf(lineOf) < 0) el.push([x, d]); else cells.push(x);
+                }
+              });
+            });
+            if (!el.length) return null;
+            return { t: name, lvl: lvl, d: d, dir: dir, lines: ls.slice(), covers: covers, cells: cells, elim: el };
+          });
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+  }
+  T.xyWing = function (st) {
+    for (var p = 0; p < 81; p++) {
+      if (PC[st.c[p]] !== 2) continue;
+      var xy = DIGS[st.c[p]];
+      var wings = PEERS[p].filter(function (x) { return PC[st.c[x]] === 2 && PC[st.c[x] & st.c[p]] === 1; });
+      for (var a = 0; a < wings.length; a++) for (var b = a + 1; b < wings.length; b++) {
+        var A = wings[a], B = wings[b];
+        var zA = st.c[A] & ~st.c[p], zB = st.c[B] & ~st.c[p];
+        if (zA !== zB || (st.c[A] & st.c[p]) === (st.c[B] & st.c[p])) continue;
+        var z = DIGS[zA][0], el = [];
+        for (var k = 0; k < 81; k++) if (k !== A && k !== B && k !== p && SEES[A][k] && SEES[B][k] && (st.c[k] & zA)) el.push([k, z]);
+        if (el.length) return { t: "xyWing", lvl: 4, d: z, cells: [p, A, B], pivot: p, digits: [xy[0], xy[1], z], elim: el };
+      }
+    }
+    return null;
+  };
+  T.xyzWing = function (st) {
+    for (var p = 0; p < 81; p++) {
+      if (PC[st.c[p]] !== 3) continue;
+      var pm = st.c[p];
+      var wings = PEERS[p].filter(function (x) { return PC[st.c[x]] === 2 && (st.c[x] & ~pm) === 0; });
+      for (var a = 0; a < wings.length; a++) for (var b = a + 1; b < wings.length; b++) {
+        var A = wings[a], B = wings[b];
+        if (st.c[A] === st.c[B]) continue;
+        var zm = st.c[A] & st.c[B];
+        if (PC[zm] !== 1) continue;
+        var z = DIGS[zm][0], el = [];
+        for (var k = 0; k < 81; k++) if (k !== A && k !== B && k !== p && SEES[A][k] && SEES[B][k] && SEES[p][k] && (st.c[k] & zm)) el.push([k, z]);
+        if (el.length) return { t: "xyzWing", lvl: 4, d: z, cells: [p, A, B], pivot: p, digits: DIGS[pm], elim: el };
+      }
+    }
+    return null;
+  };
+  T.coloring = function (st) {
+    for (var d = 1; d <= 9; d++) {
+      var bb = bit(d), adj = {};
+      for (var uu = 0; uu < 27; uu++) {
+        var ps = UNITS[uu].filter(function (x) { return st.c[x] & bb; });
+        if (ps.length === 2) {
+          (adj[ps[0]] = adj[ps[0]] || []).push(ps[1]);
+          (adj[ps[1]] = adj[ps[1]] || []).push(ps[0]);
+        }
+      }
+      var color = {}, seen = {};
+      var nodes = Object.keys(adj).map(Number);
+      for (var s = 0; s < nodes.length; s++) {
+        if (seen[nodes[s]]) continue;
+        var comp = [], stack = [nodes[s]]; color[nodes[s]] = 0; seen[nodes[s]] = 1;
+        while (stack.length) {
+          var x = stack.pop(); comp.push(x);
+          adj[x].forEach(function (y) { if (!seen[y]) { seen[y] = 1; color[y] = 1 - color[x]; stack.push(y); } });
+        }
+        if (comp.length < 4) continue;
+        var g0 = comp.filter(function (x) { return color[x] === 0; }), g1 = comp.filter(function (x) { return color[x] === 1; });
+        // color wrap
+        var groups = [g0, g1];
+        for (var gi = 0; gi < 2; gi++) {
+          var g = groups[gi], clash = null;
+          for (var a = 0; a < g.length && !clash; a++) for (var b2 = a + 1; b2 < g.length; b2++) if (SEES[g[a]][g[b2]]) { clash = [g[a], g[b2]]; break; }
+          if (clash) return { t: "colorWrap", lvl: 4, d: d, cells: comp, groupA: g0, groupB: g1, bad: gi, clash: clash, elim: g.map(function (x) { return [x, d]; }) };
+        }
+        // color trap
+        var el = [];
+        for (var k = 0; k < 81; k++) {
+          if (!(st.c[k] & bb) || color[k] !== undefined && comp.indexOf(k) >= 0) continue;
+          var s0 = g0.some(function (x) { return SEES[x][k]; }), s1 = g1.some(function (x) { return SEES[x][k]; });
+          if (s0 && s1) el.push([k, d]);
+        }
+        if (el.length) return { t: "colorTrap", lvl: 4, d: d, cells: comp, groupA: g0, groupB: g1, elim: el };
+      }
+    }
+    return null;
+  };
+  T.nakedPair = nakedSubset(2, 2, "nakedPair");
+  T.hiddenPair = hiddenSubset(2, 2, "hiddenPair");
+  T.nakedTriple = nakedSubset(3, 3, "nakedTriple");
+  T.hiddenTriple = hiddenSubset(3, 3, "hiddenTriple");
+  T.nakedQuad = nakedSubset(4, 3, "nakedQuad");
+  T.hiddenQuad = hiddenSubset(4, 4, "hiddenQuad");
+  T.xWing = fish(2, 3, "xWing");
+  T.swordfish = fish(3, 4, "swordfish");
+
+  var ORDER = ["hiddenSingle", "nakedSingle", "lockedCandidates", "nakedPair", "hiddenPair",
+    "nakedTriple", "hiddenTriple", "xWing", "nakedQuad", "xyWing", "xyzWing", "swordfish", "hiddenQuad", "colorTrap"];
+  var FN = {
+    hiddenSingle: T.hiddenSingle, nakedSingle: T.nakedSingle, lockedCandidates: T.lockedCandidates,
+    nakedPair: T.nakedPair, hiddenPair: T.hiddenPair, nakedTriple: T.nakedTriple, hiddenTriple: T.hiddenTriple,
+    xWing: T.xWing, nakedQuad: T.nakedQuad, xyWing: T.xyWing, xyzWing: T.xyzWing, swordfish: T.swordfish,
+    hiddenQuad: T.hiddenQuad, colorTrap: T.coloring
+  };
+  function findStep(st) {
+    for (var q = 0; q < ORDER.length; q++) {
+      var s = FN[ORDER[q]](st);
+      if (s) return s;
+    }
+    return null;
+  }
+  var WEIGHT = { 1: 1, 2: 6, 3: 20, 4: 50 };
+  function rate(values) {
+    var st = newState(values), maxLvl = 0, score = 0, steps = 0, used = {};
+    while (true) {
+      var empty = 0;
+      for (var k = 0; k < 81; k++) if (!st.v[k]) empty++;
+      if (!empty) break;
+      var s = findStep(st);
+      if (!s) return { solved: false, maxLevel: 5, score: score, used: used };
+      if (s.lvl > maxLvl) maxLvl = s.lvl;
+      score += WEIGHT[s.lvl]; steps++; used[s.t] = (used[s.t] || 0) + 1;
+      applyStep(st, s);
+    }
+    return { solved: true, maxLevel: maxLvl, score: score, steps: steps, used: used };
+  }
+
+  // ---------- generator ----------
+  var LEVELS = { easy: 1, medium: 2, hard: 3, expert: 4 };
+  function generateOne(rand, level) {
+    var full = solve(new Array(81).fill(0), 1, rand).solution;
+    var puz = full.slice(), order = [];
+    for (var k = 0; k < 41; k++) order.push(k);
+    shuffle(order, rand);
+    var minClues = level === 1 ? 34 : 17, clues = 81;
+    for (var q = 0; q < order.length; q++) {
+      var a = order[q], b = 80 - a, removed = a === b ? 1 : 2;
+      if (clues - removed < minClues) continue;
+      var sa = puz[a], sb = puz[b];
+      puz[a] = 0; puz[b] = 0;
+      if (solve(puz, 2).count !== 1) { puz[a] = sa; puz[b] = sb; } else clues -= removed;
+    }
+    return { puzzle: puz, solution: full };
+  }
+  function generate(seed, levelName, maxTries) {
+    var level = LEVELS[levelName] || 2, rand = makeRng(seed + "|" + levelName);
+    maxTries = maxTries || 4000;
+    var best = null;
+    for (var t = 0; t < maxTries; t++) {
+      var g = generateOne(rand, level), r = rate(g.puzzle);
+      if (!r.solved) continue;
+      if (r.maxLevel === level) { g.rating = r; g.tries = t + 1; return g; }
+      if (r.maxLevel < level && (!best || r.maxLevel > best.rating.maxLevel)) { g.rating = r; best = g; }
+    }
+    return best;
+  }
+
+  return {
+    ROW: ROW, COL: COL, BOX: BOX, UNITS: UNITS, PEERS: PEERS, SEES: SEES, PC: PC, DIGS: DIGS, bit: bit,
+    makeRng: makeRng, solve: solve, newState: newState, applyStep: applyStep, place: place,
+    findStep: findStep, rate: rate, generate: generate, LEVELS: LEVELS, hashStr: hashStr
+  };
+})();
+if (typeof module !== "undefined") module.exports = SE;
+
+</script>
+<script>
+window.FIREBASE_CONFIG = null;
+</script>
+<script>
+// Standalone backend: implements the small claude.use(room/db/user) surface the app needs, on Firebase Realtime Database.
+(function () {
+  var CFG = window.FIREBASE_CONFIG;
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  var uid = lsGet("sd.uid");
+  if (!uid) { uid = "u" + Math.random().toString(36).slice(2, 12); lsSet("sd.uid", uid); }
+  window.SD_STANDALONE = true;
+  if (!CFG || !CFG.databaseURL) { window.claude = { use: function () { return Promise.resolve(null); } }; return; }
+
+  function load(src) { return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+  var V = "10.12.2";
+  var ready = load("https://www.gstatic.com/firebasejs/" + V + "/firebase-app-compat.js")
+    .then(function () { return load("https://www.gstatic.com/firebasejs/" + V + "/firebase-database-compat.js"); })
+    .then(function () { firebase.initializeApp(CFG); return firebase.database(); })
+    .catch(function () { return null; });
+
+  function snapDoc(id, val) { return { id: id, exists: val != null, data: function () { return val == null ? undefined : val; }, metadata: { fromCache: false, hasPendingWrites: false } }; }
+
+  function makeRoom(db, name) {
+    var ref = db.ref("rooms/" + name), peer = "p" + Math.random().toString(36).slice(2, 12), me = ref.child(peer);
+    var mine = {}, handlers = [], last = {}, timer = null, cur = [];
+    me.onDisconnect().remove();
+    function push() { timer = null; me.set({ by: uid, p: mine, t: firebase.database.ServerValue.TIMESTAMP }); }
+    function build(val) {
+      val = val || {};
+      var peers = [], joined = [], left = [], updated = [], now = {};
+      if (!val[peer]) val[peer] = { by: uid, p: Object.assign({}, mine) };
+      Object.keys(val).forEach(function (k) {
+        var e = val[k] || {}, p = { peer: k, by: e.by || null, isMe: k === peer, sameTab: k === peer, kind: "viewer", guest: false, presence: Object.freeze(Object.assign({}, e.p || {})), updatedAt: Date.now() };
+        peers.push(p); now[k] = JSON.stringify(e.p || {});
+        if (!(k in last)) joined.push(p); else if (last[k] !== now[k]) updated.push(p);
+      });
+      Object.keys(last).forEach(function (k) { if (!(k in now)) left.push({ peer: k, by: null, sameTab: false, presence: {} }); });
+      last = now; cur = peers;
+      return { peers: peers, joined: joined, left: left, updated: updated };
+    }
+    var listener = ref.on("value", function (s) { var ch = build(s.val()); handlers.forEach(function (h) { try { h(ch); } catch (e) { console.error(e); } }); });
+    return {
+      name: name,
+      presence: function (patch) {
+        for (var k in patch) { if (patch[k] === null) delete mine[k]; else mine[k] = patch[k]; }
+        if (!timer) timer = setTimeout(push, 60);
+        return Promise.resolve();
+      },
+      onPeers: function (h) { handlers.push(h); return function () { handlers = handlers.filter(function (x) { return x !== h; }); }; },
+      peers: function () { return cur; },
+      emit: function () { return Promise.resolve(); }, on: function () { return function () {}; },
+      connected: function () { return true; },
+      leave: function () { handlers = []; ref.off("value", listener); me.onDisconnect().cancel(); return me.remove(); }
+    };
+  }
+
+  window.claude = {
+    use: function (name) {
+      return ready.then(function (db) {
+        if (!db) return null;
+        if (name === "room") return { join: function (n) { return Promise.resolve(makeRoom(db, n)); } };
+        if (name === "user") return {
+          id: function () { return Promise.resolve(uid); },
+          setName: function (n) { return db.ref("names/" + uid).set(String(n || "").slice(0, 30)); },
+          profiles: function (ids) {
+            return Promise.all(ids.map(function (id) { return db.ref("names/" + id).once("value").then(function (s) { return [id, { name: s.val() || "" }]; }, function () { return [id, { name: "" }]; }); }))
+              .then(function (pairs) { var o = {}; pairs.forEach(function (p) { o[p[0]] = p[1]; }); return o; });
+          }
+        };
+        if (name === "db") return {
+          collection: function (col) {
+            return {
+              doc: function (id) {
+                var r = db.ref(col + "/" + id);
+                return { get: function () { return r.once("value").then(function (s) { return snapDoc(id, s.val()); }); }, set: function (d) { return r.set(d); } };
+              },
+              get: function () {
+                return db.ref(col).once("value").then(function (s) {
+                  var v = s.val() || {}, docs = Object.keys(v).map(function (k) { return snapDoc(k, v[k]); });
+                  return { docs: docs, size: docs.length, empty: !docs.length };
+                });
+              }
+            };
+          }
+        };
+        return null;
+      });
+    }
+  };
+})();
+
+</script>
+<link rel="manifest" href="manifest.json">
+<script>
+var STR = {
+en: {
+  easy:"Easy", medium:"Medium", hard:"Hard", expert:"Expert", custom:"Own puzzle",
+  easyD:"Singles only", mediumD:"Pairs & pointing", hardD:"Triples & X-Wing", expertD:"Wings, coloring & fish",
+  daily:"Daily", undo:"Undo", erase:"Erase", notes:"Notes", hint:"Hint",
+  nNew:"New", nShare:"Share", nTogether:"Together", nMore:"More",
+  newGame:"New game", random:"Random puzzle", dailyH:"Puzzle of the day",
+  dailyP:"Everyone gets the same puzzle today, so you can compare times without coordinating.",
+  typeIn:"Type in a puzzle", typeInD:"From a newspaper or book, get hints for it",
+  openCode:"Open a code or link", openCodeD:"Someone sent you a puzzle",
+  generating:"Building a puzzle…", genSub:"Making sure it has exactly one solution and can be solved with logic only.",
+  paused:"Paused", resume:"Resume", tapResume:"Tap to keep going",
+  shareT:"Share this puzzle", shareP:"Send the link (or the code) — the other person gets exactly this puzzle.",
+  withProg:"Include my progress & notes", withProgD:"Good for “I'm stuck, can you help?”",
+  copyLink:"Copy link", copyCode:"Copy code", copied:"Copied!", copyFail:"Select the text and copy it manually.",
+  linkNote:"If the link opens without the puzzle, paste the code under New → Open a code.",
+  togetherT:"Play together", coop:"Solve together (live)", coopD:"One shared grid — you see each other's moves and cursor.",
+  race:"Race (live)", raceD:"Same puzzle, separate grids, start together. Fastest wins.",
+  challenge:"Challenge (any time)", challengeD:"Solve first, then send your time. They play the same puzzle later.",
+  board:"Times for this puzzle", boardD:"Everyone who solved this exact puzzle here.",
+  liveNeeds:"Live play works on the published page when you're signed in. Share the page with the other person first (see tips below).",
+  inviteT:"Invite your partner", inviteP:"Send them this link. When they open it, they join automatically.",
+  leave:"Leave", waiting:"Waiting for your partner…", waitingP:"Send the invite link. The race starts when everyone has tapped Ready.",
+  ready:"I'm ready", readyWait:"Ready — waiting for the others", raceOn:"Race in progress", go:"Go!",
+  you:"you", player:"Player", editing:"at", finished:"done",
+  solved:"Solved!", time:"Time", hintsUsed:"Hints", mistakes:"Mistakes", newPuzzle:"New puzzle",
+  sendChallenge:"Send as challenge", beatIt:"Your challenger solved this in {t}. Can you beat it?",
+  beatItN:"{n} solved this in {t}. Can you beat it?",
+  youWon:"You beat the challenge by {t}!", youLost:"The challenger was {t} faster.",
+  settings:"Settings", language:"Language", auto:"Auto", mistakesMode:"Show mistakes",
+  mOff:"Never", mConf:"Rule conflicts", mSol:"Wrong numbers right away",
+  autoNotes:"Remove notes automatically", sameHl:"Highlight same numbers", yourName:"Your name (for challenges)",
+  fillNotes:"Fill in all notes", clearNotes:"Clear all notes", restart:"Restart puzzle", stats:"Statistics",
+  statsT:"Your statistics", played:"Solved", best:"Best", avg:"Average", none:"No solved puzzles yet.",
+  enterT:"Type in the given numbers, then tap Start.", start:"Start", cancel:"Cancel", paste:"…or paste 81 digits (0 or . for empty)",
+  noSol:"This puzzle has no solution — please check the numbers.", multiSol:"This puzzle has more than one solution — a number is probably missing or wrong.",
+  conflictEntry:"Two equal numbers in one row, column or box.", tooFew:"Enter at least 17 numbers.",
+  badCode:"That code doesn't look like a puzzle.", opened:"Puzzle opened", fullWrong:"The grid is full, but something isn't right yet.",
+  confirmNew:"Start a new puzzle? Your progress here is saved.", openOther:"Open the shared puzzle?",
+  open:"Open", close:"Close", moreHelp:"More help", apply:"Do it for me", showMe:"Show me", ok:"OK",
+  legend:"R = row (top→bottom), C = column (left→right)", lvl:"Hint {n}/3",
+  tipsT:"How to share with family",
+  tips:"Open this page on claude.ai and use Share to invite the person by email. For live co-op and to save times on the leaderboard, give them edit access. With view access they can still race and use links.",
+  cleared:"Notes filled in", saved:"Your time was saved", raceWait:"Finished! Waiting for the others…",
+  mistakeShown:"Removed the wrong numbers.", leaderEmpty:"No times yet — be the first!", loading:"Loading…",
+  dbOff:"The leaderboard needs the published page while you're signed in.", coopShort:"co-op",
+  joined:"joined", left:"left", liveCoop:"Live co-op", liveRace:"Live race", restartQ:"Clear all your entries?", sa_tips:"Just send the link — no account or app needed. It works in any browser; on iPhone use Share → Add to Home Screen for an app icon.", sa_liveNeeds:"Live play isn't connected yet.", sa_dbOff:"The shared times list isn't connected yet.", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
+},
+de: {
+  easy:"Leicht", medium:"Mittel", hard:"Schwer", expert:"Experte", custom:"Eigenes Rätsel",
+  easyD:"Nur Singles", mediumD:"Paare & Zeiger", hardD:"Drillinge & X-Wing", expertD:"Wings, Färben & Fische",
+  daily:"Täglich", undo:"Zurück", erase:"Löschen", notes:"Notizen", hint:"Tipp",
+  nNew:"Neu", nShare:"Teilen", nTogether:"Zusammen", nMore:"Mehr",
+  newGame:"Neues Spiel", random:"Zufälliges Rätsel", dailyH:"Rätsel des Tages",
+  dailyP:"Heute bekommen alle dasselbe Rätsel — so könnt ihr eure Zeiten ganz ohne Absprache vergleichen.",
+  typeIn:"Rätsel eintippen", typeInD:"Aus Zeitung oder Heft — und Tipps dafür bekommen",
+  openCode:"Code oder Link öffnen", openCodeD:"Jemand hat dir ein Rätsel geschickt",
+  generating:"Rätsel wird erstellt…", genSub:"Es wird geprüft, dass es genau eine Lösung hat und rein logisch lösbar ist.",
+  paused:"Pause", resume:"Weiter", tapResume:"Tippen zum Weiterspielen",
+  shareT:"Dieses Rätsel teilen", shareP:"Schick den Link (oder den Code) — die andere Person bekommt genau dieses Rätsel.",
+  withProg:"Meinen Stand & Notizen mitschicken", withProgD:"Ideal für „Ich komme nicht weiter, hilfst du mir?“",
+  copyLink:"Link kopieren", copyCode:"Code kopieren", copied:"Kopiert!", copyFail:"Text markieren und manuell kopieren.",
+  linkNote:"Falls der Link ohne Rätsel öffnet: Code unter Neu → Code öffnen einfügen.",
+  togetherT:"Zusammen spielen", coop:"Gemeinsam lösen (live)", coopD:"Ein gemeinsames Gitter — ihr seht die Züge und den Cursor des anderen.",
+  race:"Wettrennen (live)", raceD:"Gleiches Rätsel, eigene Gitter, gemeinsamer Start. Wer ist schneller?",
+  challenge:"Herausforderung (jederzeit)", challengeD:"Erst selbst lösen, dann die Zeit schicken. Die andere Person spielt später dasselbe Rätsel.",
+  board:"Zeiten für dieses Rätsel", boardD:"Alle, die genau dieses Rätsel hier gelöst haben.",
+  liveNeeds:"Live-Spielen funktioniert auf der veröffentlichten Seite, wenn du angemeldet bist. Teile die Seite zuerst mit der anderen Person (siehe Tipps unten).",
+  inviteT:"Partner einladen", inviteP:"Schick diesen Link. Beim Öffnen tritt die Person automatisch bei.",
+  leave:"Verlassen", waiting:"Warte auf deinen Partner…", waitingP:"Schick den Einladungslink. Das Rennen startet, sobald alle auf Bereit getippt haben.",
+  ready:"Ich bin bereit", readyWait:"Bereit — warte auf die anderen", raceOn:"Rennen läuft", go:"Los!",
+  you:"du", player:"Spieler", editing:"bei", finished:"fertig",
+  solved:"Gelöst!", time:"Zeit", hintsUsed:"Tipps", mistakes:"Fehler", newPuzzle:"Neues Rätsel",
+  sendChallenge:"Als Herausforderung senden", beatIt:"Deine Herausforderung: gelöst in {t}. Schaffst du es schneller?",
+  beatItN:"{n} hat das in {t} gelöst. Schaffst du es schneller?",
+  youWon:"Herausforderung geschlagen — {t} schneller!", youLost:"Die andere Person war {t} schneller.",
+  settings:"Einstellungen", language:"Sprache", auto:"Automatisch", mistakesMode:"Fehler anzeigen",
+  mOff:"Nie", mConf:"Regelkonflikte", mSol:"Falsche Zahlen sofort",
+  autoNotes:"Notizen automatisch entfernen", sameHl:"Gleiche Zahlen hervorheben", yourName:"Dein Name (für Herausforderungen)",
+  fillNotes:"Alle Notizen eintragen", clearNotes:"Alle Notizen löschen", restart:"Rätsel neu starten", stats:"Statistik",
+  statsT:"Deine Statistik", played:"Gelöst", best:"Beste", avg:"Schnitt", none:"Noch keine gelösten Rätsel.",
+  enterT:"Tippe die vorgegebenen Zahlen ein und dann auf Start.", start:"Start", cancel:"Abbrechen", paste:"…oder 81 Ziffern einfügen (0 oder . für leer)",
+  noSol:"Dieses Rätsel hat keine Lösung — bitte die Zahlen prüfen.", multiSol:"Dieses Rätsel hat mehr als eine Lösung — wahrscheinlich fehlt eine Zahl oder ist falsch.",
+  conflictEntry:"Zwei gleiche Zahlen in einer Zeile, Spalte oder einem Block.", tooFew:"Bitte mindestens 17 Zahlen eingeben.",
+  badCode:"Dieser Code sieht nicht nach einem Rätsel aus.", opened:"Rätsel geöffnet", fullWrong:"Das Gitter ist voll, aber noch stimmt etwas nicht.",
+  confirmNew:"Neues Rätsel starten? Dein Stand hier bleibt gespeichert.", openOther:"Das geteilte Rätsel öffnen?",
+  open:"Öffnen", close:"Schließen", moreHelp:"Mehr Hilfe", apply:"Für mich erledigen", showMe:"Zeig's mir", ok:"OK",
+  legend:"Z = Zeile (oben→unten), S = Spalte (links→rechts)", lvl:"Tipp {n}/3",
+  tipsT:"So teilst du mit der Familie",
+  tips:"Öffne diese Seite auf claude.ai und lade die Person über Teilen per E-Mail ein. Für Live-Koop und Bestenliste braucht sie Bearbeitungsrechte. Mit Leserechten kann sie trotzdem Rennen fahren und Links nutzen.",
+  cleared:"Notizen eingetragen", saved:"Deine Zeit wurde gespeichert", raceWait:"Fertig! Warte auf die anderen…",
+  mistakeShown:"Falsche Zahlen entfernt.", leaderEmpty:"Noch keine Zeiten — sei die/der Erste!", loading:"Lädt…",
+  dbOff:"Die Bestenliste braucht die veröffentlichte Seite und eine Anmeldung.", coopShort:"Koop",
+  joined:"ist da", left:"ist weg", liveCoop:"Live-Koop", liveRace:"Live-Rennen", restartQ:"Alle Einträge löschen?", sa_tips:"Schick einfach den Link — kein Konto, keine App nötig. Läuft in jedem Browser; auf dem iPhone über Teilen → Zum Home-Bildschirm als App-Symbol.", sa_liveNeeds:"Live-Spielen ist noch nicht verbunden.", sa_dbOff:"Die gemeinsame Zeitenliste ist noch nicht verbunden.", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
+}};
+
+var BOXPOS = {
+  en:["top-left","top-middle","top-right","middle-left","center","middle-right","bottom-left","bottom-middle","bottom-right"],
+  de:["oben links","oben Mitte","oben rechts","Mitte links","Mitte","Mitte rechts","unten links","unten Mitte","unten rechts"]
+};
+var TECH = {
+  en:{hiddenSingle:"Hidden Single",nakedSingle:"Naked Single",pointing:"Pointing (Locked Candidates)",claiming:"Claiming (Box-Line Reduction)",
+    nakedPair:"Naked Pair",hiddenPair:"Hidden Pair",nakedTriple:"Naked Triple",hiddenTriple:"Hidden Triple",nakedQuad:"Naked Quad",hiddenQuad:"Hidden Quad",
+    xWing:"X-Wing",swordfish:"Swordfish",xyWing:"XY-Wing",xyzWing:"XYZ-Wing",colorTrap:"Simple Coloring",colorWrap:"Simple Coloring",
+    mistake:"Check your numbers",badNote:"Check your notes",reveal:"Tough spot"},
+  de:{hiddenSingle:"Versteckter Single",nakedSingle:"Nackter Single",pointing:"Zeiger (Block → Linie)",claiming:"Linie → Block",
+    nakedPair:"Nacktes Paar",hiddenPair:"Verstecktes Paar",nakedTriple:"Nackter Drilling",hiddenTriple:"Versteckter Drilling",nakedQuad:"Nackter Vierling",hiddenQuad:"Versteckter Vierling",
+    xWing:"X-Wing",swordfish:"Schwertfisch",xyWing:"XY-Wing",xyzWing:"XYZ-Wing",colorTrap:"Einfaches Färben",colorWrap:"Einfaches Färben",
+    mistake:"Zahlen prüfen",badNote:"Notizen prüfen",reveal:"Kniffliger Moment"}
+};
+
+var HINTS = (function () {
+  function cn(i, L) { var r = SE.ROW[i] + 1, c = SE.COL[i] + 1; return L === "de" ? "Z" + r + "S" + c : "R" + r + "C" + c; }
+  function un(u, L) {
+    if (u < 9) return (L === "de" ? "Zeile " : "row ") + (u + 1);
+    if (u < 18) return (L === "de" ? "Spalte " : "column ") + (u - 8);
+    return (L === "de" ? "Block " : "box ") + (u - 17) + " (" + BOXPOS[L][u - 18] + ")";
+  }
+  function cl(cells, L) { return uniq(cells).map(function (i) { return cn(i, L); }).join(", "); }
+  function dl(ds, L) {
+    ds = ds.slice();
+    if (ds.length < 2) return String(ds[0]);
+    var last = ds.pop();
+    return ds.join(", ") + (L === "de" ? " und " : " and ") + last;
+  }
+  function uniq(a) { var s = {}, o = []; a.forEach(function (x) { if (!s[x]) { s[x] = 1; o.push(x); } }); return o; }
+  function tgts(elim, L) {
+    var by = {}, order = [];
+    elim.forEach(function (e) { if (!by[e[0]]) { by[e[0]] = []; order.push(e[0]); } by[e[0]].push(e[1]); });
+    return order.map(function (i) { return cn(i, L) + " (" + by[i].join("/") + ")"; }).join(", ");
+  }
+  function lineWord(dir, L, plural) {
+    if (L === "de") return dir === 0 ? (plural ? "Zeilen" : "Zeile") : (plural ? "Spalten" : "Spalte");
+    return dir === 0 ? (plural ? "rows" : "row") : (plural ? "columns" : "column");
+  }
+  function seenDigits(st, i) {
+    var m = 0; SE.PEERS[i].forEach(function (p) { if (st.v[p]) m |= SE.bit(st.v[p]); }); return SE.DIGS[m];
+  }
+
+  function build(step, level, L, ctx) {
+    var de = L === "de", t = step.t, d = step.d, out = { title: TECH[L][t] || t, text: "", pat: [], tgt: [], units: [], cA: [], cB: [], nm: [], ne: [], np: [] };
+    var n = step.cells ? step.cells.length : 0;
+    var E = step.elim ? tgts(step.elim, L) : "";
+    if (level >= 3 && step.elim) { out.tgt = step.elim.map(function (e) { return e[0]; }); out.ne = step.elim; }
+    if (level >= 2 && step.cells) out.pat = step.cells.slice();
+    switch (t) {
+      case "mistake":
+        out.text = level === 1 ? (de ? "Mindestens eine eingetragene Zahl ist falsch. Bevor es weitergeht, lohnt sich ein Blick auf deine Zahlen." : "At least one number you entered is wrong. It's worth checking your numbers before going further.")
+          : level === 2 ? (de ? "Die markierten Zellen enthalten eine falsche Zahl: " : "The highlighted cells contain a wrong number: ") + cl(step.cells, L) + "."
+          : (de ? "Die Zahlen in " + cl(step.cells, L) + " stimmen nicht mit der Lösung überein. Tippe auf „Für mich erledigen“, um sie zu entfernen." : "The numbers in " + cl(step.cells, L) + " don't match the solution. Tap “Do it for me” to remove them.");
+        if (level >= 2) { out.tgt = step.cells.slice(); out.pat = []; }
+        return out;
+      case "badNote":
+        out.text = level === 1 ? (de ? "In einer Zelle fehlt in deinen Notizen die richtige Ziffer." : "One of your cells has notes that leave out the correct digit.")
+          : level === 2 ? (de ? "Schau dir die Notizen in " + cl(step.cells, L) + " an — eine Ziffer wurde zu früh gestrichen." : "Look at the notes in " + cl(step.cells, L) + " — a digit was crossed out too early.")
+          : (de ? "In " + cl(step.cells, L) + " fehlt die " + d + " in den Notizen, sie ist dort aber möglich. Ich kann sie wieder eintragen." : "The " + d + " is missing from the notes in " + cl(step.cells, L) + ", but it's still possible there. I can add it back.");
+        if (level >= 3) out.np = [[step.cells[0], d]];
+        return out;
+      case "reveal":
+        out.text = de ? "Hier braucht es eine Technik, die über meine Tipps hinausgeht. Ich verrate dir eine sichere Zahl: " + cn(step.cells[0], L) + " = " + d + "."
+          : "This spot needs a technique beyond my hint set. Here's one safe digit: " + cn(step.cells[0], L) + " = " + d + ".";
+        out.pat = step.cells.slice();
+        return out;
+      case "hiddenSingle":
+        out.units = [step.unit];
+        out.text = level === 1 ? (de ? "Schau dir " + un(step.unit, L) + " an. Eine Ziffer passt dort nur noch an eine einzige Stelle." : "Look at " + un(step.unit, L) + ". One digit has only one possible spot left there.")
+          : level === 2 ? (de ? "In " + un(step.unit, L) + " passt die " + d + " nur in eine Zelle (markiert)." : "In " + un(step.unit, L) + ", the " + d + " fits in only one cell (highlighted).")
+          : (de ? "Jede andere Zelle in " + un(step.unit, L) + " ist für die " + d + " gesperrt: Sie ist schon gefüllt, oder in ihrer Zeile, Spalte oder ihrem Block steht schon eine " + d + ". Also muss " + cn(step.cells[0], L) + " die " + d + " sein."
+            : "Every other cell in " + un(step.unit, L) + " is blocked for " + d + ": it's already filled, or its row, column or box already has a " + d + ". So " + cn(step.cells[0], L) + " must be " + d + ".");
+        if (level >= 2) out.nm = [[step.cells[0], d]];
+        return out;
+      case "nakedSingle":
+        var i = step.cells[0], seen = seenDigits(ctx.st, i).filter(function (x) { return x !== d; });
+        out.units = level === 1 ? [18 + SE.BOX[i]] : [];
+        out.text = level === 1 ? (de ? "Irgendwo in " + un(18 + SE.BOX[i], L) + " gibt es eine Zelle, in die nur noch eine einzige Ziffer passt." : "Somewhere in " + un(18 + SE.BOX[i], L) + " there's a cell where only one digit can still go.")
+          : level === 2 ? (de ? "Prüfe für die markierte Zelle " + cn(i, L) + " jede Ziffer von 1 bis 9." : "For the highlighted cell " + cn(i, L) + ", go through each digit from 1 to 9.")
+          : (seen.length === 8
+            ? (de ? "Zeile, Spalte und Block von " + cn(i, L) + " enthalten schon " + dl(seen, L) + ". Übrig bleibt nur die " + d + "." : "The row, column and box of " + cn(i, L) + " already contain " + dl(seen, L) + ". Only " + d + " is left.")
+            : (de ? "Alle anderen Ziffern sind für " + cn(i, L) + " ausgeschlossen — durch die Zahlen in ihrer Zeile, Spalte und ihrem Block und durch frühere Schritte. Es bleibt nur die " + d + "." : "Every other digit is ruled out for " + cn(i, L) + " — by the numbers in its row, column and box, plus earlier deductions. Only " + d + " is left."));
+        return out;
+      case "pointing":
+        out.units = level >= 2 ? [step.unit, step.unit2] : [step.unit];
+        if (level >= 2) out.nm = step.cells.map(function (x) { return [x, d]; });
+        out.text = level === 1 ? (de ? "Schau, wo die " + d + " in " + un(step.unit, L) + " überhaupt hin kann." : "Look at where the " + d + " can go in " + un(step.unit, L) + ".")
+          : level === 2 ? (de ? "In " + un(step.unit, L) + " liegen alle möglichen Plätze für die " + d + " in " + un(step.unit2, L) + "." : "In " + un(step.unit, L) + ", all possible spots for " + d + " lie in " + un(step.unit2, L) + ".")
+          : (de ? "Die " + d + " von " + un(step.unit, L) + " muss in " + cl(step.cells, L) + " stehen — alle in " + un(step.unit2, L) + ". Damit ist die " + d + " dieser Linie schon im Block vergeben. Streiche die " + d + " im Rest von " + un(step.unit2, L) + ": " + E + "."
+            : "The " + d + " of " + un(step.unit, L) + " has to be in " + cl(step.cells, L) + " — all in " + un(step.unit2, L) + ". So that line's " + d + " is already used inside this box. Remove " + d + " from the rest of " + un(step.unit2, L) + ": " + E + ".");
+        return out;
+      case "claiming":
+        out.units = level >= 2 ? [step.unit, step.unit2] : [step.unit];
+        if (level >= 2) out.nm = step.cells.map(function (x) { return [x, d]; });
+        out.text = level === 1 ? (de ? "Schau, wo die " + d + " in " + un(step.unit, L) + " hin kann." : "Look at where the " + d + " can go in " + un(step.unit, L) + ".")
+          : level === 2 ? (de ? "In " + un(step.unit, L) + " liegen alle Plätze für die " + d + " in " + un(step.unit2, L) + "." : "In " + un(step.unit, L) + ", every spot for " + d + " is inside " + un(step.unit2, L) + ".")
+          : (de ? "Die " + d + " von " + un(step.unit, L) + " steht in " + cl(step.cells, L) + " — alle in " + un(step.unit2, L) + ". Also ist die " + d + " dieses Blocks eine davon. Streiche die " + d + " im Rest des Blocks: " + E + "."
+            : "The " + d + " of " + un(step.unit, L) + " must be in " + cl(step.cells, L) + " — all inside " + un(step.unit2, L) + ". So that box's " + d + " is one of these cells. Remove " + d + " from the rest of the box: " + E + ".");
+        return out;
+      case "nakedPair": case "nakedTriple": case "nakedQuad":
+        out.units = [step.unit];
+        if (level >= 2) out.nm = [].concat.apply([], step.cells.map(function (x) { return step.digits.map(function (dd) { return [x, dd]; }); }));
+        out.text = level === 1 ? (de ? "Schau dir " + un(step.unit, L) + " an: " + n + " Zellen teilen sich dieselben " + n + " Kandidaten." : "Look at " + un(step.unit, L) + ": " + n + " cells share the same " + n + " candidates.")
+          : level === 2 ? (de ? "Die Zellen " + cl(step.cells, L) + " können nur " + dl(step.digits, L) + " enthalten." : "The cells " + cl(step.cells, L) + " can only hold " + dl(step.digits, L) + ".")
+          : (de ? n + " Zellen, " + n + " Ziffern: " + dl(step.digits, L) + " müssen genau in " + cl(step.cells, L) + " stehen. Keine andere Zelle in " + un(step.unit, L) + " kann sie haben. Streiche: " + E + "."
+            : n + " cells, " + n + " digits: " + dl(step.digits, L) + " must go exactly in " + cl(step.cells, L) + ". No other cell in " + un(step.unit, L) + " can have them. Remove: " + E + ".");
+        return out;
+      case "hiddenPair": case "hiddenTriple": case "hiddenQuad":
+        out.units = [step.unit];
+        if (level >= 2) out.nm = [].concat.apply([], step.cells.map(function (x) { return step.digits.map(function (dd) { return [x, dd]; }); }));
+        out.text = level === 1 ? (de ? "Schau dir " + un(step.unit, L) + " an: " + n + " Ziffern passen nur in dieselben " + n + " Zellen." : "Look at " + un(step.unit, L) + ": " + n + " digits fit only in the same " + n + " cells.")
+          : level === 2 ? (de ? "In " + un(step.unit, L) + " können " + dl(step.digits, L) + " nur in " + cl(step.cells, L) + " stehen." : "In " + un(step.unit, L) + ", " + dl(step.digits, L) + " can only go in " + cl(step.cells, L) + ".")
+          : (de ? n + " Ziffern brauchen genau diese " + n + " Zellen, also ist dort kein Platz für anderes. Streiche die übrigen Kandidaten: " + E + "."
+            : n + " digits need exactly these " + n + " cells, so nothing else fits there. Remove the other candidates: " + E + ".");
+        return out;
+      case "xWing": case "swordfish":
+        var base = step.lines.map(function (x) { return x + 1; }), cov = step.covers.map(function (x) { return x + 1; });
+        var bw = lineWord(step.dir, L, true), cw = lineWord(1 - step.dir, L, true);
+        if (level >= 2) out.nm = step.cells.map(function (x) { return [x, d]; });
+        out.text = level === 1 ? (de ? "Schau, wo die " + d + " in den " + bw + " noch hin kann." : "Look at where the " + d + " can still go in each of the " + bw + ".")
+          : level === 2 ? (de ? "In den " + bw + " " + dl(base, L) + " kann die " + d + " nur in den " + cw + " " + dl(cov, L) + " stehen." : "In " + bw + " " + dl(base, L) + ", the " + d + " can only go in " + cw + " " + dl(cov, L) + ".")
+          : (de ? "Jede dieser " + step.lines.length + " " + bw + " braucht eine " + d + ", und alle nutzen dieselben " + step.covers.length + " " + cw + ". Diese " + bw + " belegen also die " + d + " jeder dieser " + cw + ". Streiche die " + d + " sonst überall in den " + cw + " " + dl(cov, L) + ": " + E + "."
+            : "Each of these " + step.lines.length + " " + bw + " needs a " + d + ", and they all use the same " + step.covers.length + " " + cw + ". So these " + bw + " take the " + d + " of every one of those " + cw + ". Remove " + d + " everywhere else in " + cw + " " + dl(cov, L) + ": " + E + ".");
+        return out;
+      case "xyWing":
+        var p = step.pivot, A = step.cells[1], B = step.cells[2], z = d;
+        var x = SE.DIGS[ctx.st.c[A] & ctx.st.c[p]][0], y = SE.DIGS[ctx.st.c[B] & ctx.st.c[p]][0];
+        if (level >= 2) out.nm = [[p, x], [p, y], [A, x], [A, z], [B, y], [B, z]];
+        out.text = level === 1 ? (de ? "Suche Zellen mit nur zwei Kandidaten, die sich gegenseitig sehen." : "Look for cells with only two candidates that see each other.")
+          : level === 2 ? (de ? "Drehpunkt " + cn(p, L) + " (" + x + "/" + y + ") mit den Flügeln " + cn(A, L) + " (" + x + "/" + z + ") und " + cn(B, L) + " (" + y + "/" + z + ")." : "Pivot " + cn(p, L) + " (" + x + "/" + y + ") with wings " + cn(A, L) + " (" + x + "/" + z + ") and " + cn(B, L) + " (" + y + "/" + z + ").")
+          : (de ? cn(p, L) + " ist " + x + " oder " + y + ". Ist es " + x + ", wird " + cn(A, L) + " zur " + z + ". Ist es " + y + ", wird " + cn(B, L) + " zur " + z + ". In jedem Fall ist einer der Flügel eine " + z + " — jede Zelle, die beide Flügel sieht, kann keine " + z + " sein: " + E + "."
+            : cn(p, L) + " is " + x + " or " + y + ". If it's " + x + ", " + cn(A, L) + " becomes " + z + ". If it's " + y + ", " + cn(B, L) + " becomes " + z + ". Either way one wing is a " + z + " — so any cell that sees both wings can't be " + z + ": " + E + ".");
+        return out;
+      case "xyzWing":
+        var p2 = step.pivot, A2 = step.cells[1], B2 = step.cells[2];
+        if (level >= 2) out.nm = step.cells.map(function (c) { return [c, d]; });
+        out.text = level === 1 ? (de ? "Suche eine Zelle mit drei Kandidaten und zwei Nachbarn mit je zwei davon." : "Look for a cell with three candidates and two neighbours that each hold two of them.")
+          : level === 2 ? (de ? "Drehpunkt " + cn(p2, L) + " (" + step.digits.join("/") + "), Flügel " + cn(A2, L) + " und " + cn(B2, L) + ". Gemeinsame Ziffer: " + d + "." : "Pivot " + cn(p2, L) + " (" + step.digits.join("/") + "), wings " + cn(A2, L) + " and " + cn(B2, L) + ". Shared digit: " + d + ".")
+          : (de ? "Egal welche Ziffer im Drehpunkt landet — einer der drei (Drehpunkt oder ein Flügel) wird zur " + d + ". Eine Zelle, die alle drei sieht, kann also keine " + d + " sein: " + E + "."
+            : "Whatever digit the pivot gets, one of the three cells (pivot or a wing) ends up as " + d + ". So a cell that sees all three can't be " + d + ": " + E + ".");
+        return out;
+      case "colorTrap": case "colorWrap":
+        if (level >= 2) { out.pat = []; out.cA = step.groupA.slice(); out.cB = step.groupB.slice(); }
+        out.text = level === 1 ? (de ? "Folge der " + d + " durch Einheiten, in denen sie nur genau zwei Plätze hat." : "Follow the " + d + " through units where it has exactly two possible spots.")
+          : level === 2 ? (de ? "Diese Kette für die " + d + " ist abwechselnd gefärbt (grün/blau): Ist eine Zelle die " + d + ", ist ihr Partner es nicht. Also ist entweder ALLES Grüne oder ALLES Blaue die " + d + "." : "This chain for " + d + " is colored alternately (green/blue): if one cell is " + d + ", its partner isn't. So either ALL green or ALL blue cells are " + d + ".")
+          : (t === "colorTrap"
+            ? (de ? "Eine Zelle, die eine grüne UND eine blaue Zelle sieht, kann keine " + d + " sein — denn eine der beiden Farben ist sicher die " + d + ". Streiche: " + E + "." : "A cell that sees a green AND a blue cell can't be " + d + " — one of the two colors is definitely " + d + ". Remove: " + E + ".")
+            : (de ? "Zwei gleichfarbige Zellen (" + cl(step.clash, L) + ") sehen sich gegenseitig — sie können nicht beide " + d + " sein. Diese Farbe ist also falsch. Streiche die " + d + " aus allen Zellen dieser Farbe: " + E + "." : "Two cells of the same color (" + cl(step.clash, L) + ") see each other — they can't both be " + d + ". So that color is wrong. Remove " + d + " from every cell of that color: " + E + "."));
+        return out;
+    }
+    out.text = "?";
+    return out;
+  }
+  return { build: build, cn: cn };
+})();
+
+(function () {
+"use strict";
+var ARTIFACT_URL = "";
+var DIFFS = ["easy", "medium", "hard", "expert"];
+var DCH = { easy: "e", medium: "m", hard: "h", expert: "x", custom: "c" }, CHD = { e: "easy", m: "medium", h: "hard", x: "expert", c: "custom" };
+var $ = function (s, r) { return (r || document).querySelector(s); };
+function el(tag, attrs, kids) {
+  var e = document.createElement(tag);
+  if (attrs) for (var k in attrs) {
+    if (attrs[k] == null) continue;
+    if (k === "class") e.className = attrs[k];
+    else if (k === "text") e.textContent = attrs[k];
+    else if (k === "html") e.innerHTML = attrs[k];
+    else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+  return e;
+}
+function ls(k, v) {
+  try {
+    if (v === undefined) { var s = localStorage.getItem(k); return s ? JSON.parse(s) : null; }
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch (e) { return null; }
+}
+
+// ---------------- settings & i18n ----------------
+var S = Object.assign({ lang: "auto", mist: "conf", autoNotes: true, same: true, name: "" }, ls("sd.settings") || {});
+function L() { return S.lang === "auto" ? ((navigator.language || "en").toLowerCase().indexOf("de") === 0 ? "de" : "en") : S.lang; }
+function t(k, v) {
+  var s = (window.SD_STANDALONE && STR[L()]["sa_" + k]) || (STR[L()][k] || STR.en[k] || k);
+  if (v) for (var x in v) s = s.split("{" + x + "}").join(v[x]);
+  return s;
+}
+function saveS() { ls("sd.settings", S); }
+function fmt(ms) {
+  var s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0");
+}
+function diffName(d) { return t(d || "custom"); }
+
+// ---------------- game state ----------------
+var G = null, HIST = [], HINT = null, notesMode = false, paused = false, sel = -1, coverMode = null;
+function pidOf(giv) {
+  var str = giv.join(""), h = SE.hashStr(str);
+  return (h().toString(36) + h().toString(36)).slice(0, 12);
+}
+function utcDate() { return new Date().toISOString().slice(0, 10); }
+function fresh(giv, sol, diff, label) {
+  return { pid: pidOf(giv), giv: giv.slice(), sol: sol.slice(), diff: diff, label: label || "",
+    vals: new Array(81).fill(0), notes: new Array(81).fill(0), ts: new Array(81).fill(0), clock: 0,
+    el: 0, done: false, hints: 0, mist: 0, elims: [], chal: null, fullWarned: false };
+}
+var saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(function () {
+    if (!G) return;
+    var games = ls("sd.games") || {};
+    games[G.pid] = Object.assign({}, G, { at: Date.now() });
+    var keys = Object.keys(games).sort(function (a, b) { return (games[b].at || 0) - (games[a].at || 0); });
+    keys.slice(25).forEach(function (k) { delete games[k]; });
+    ls("sd.games", games); ls("sd.cur", G.pid);
+  }, 300);
+}
+function loadSaved(pid) { var g = (ls("sd.games") || {})[pid]; return g && g.giv ? g : null; }
+function setGame(g) {
+  G = g; HIST = []; HINT = null; sel = -1; paused = false; setCover(null);
+  $("#board").classList.remove("win");
+  render(); renderHint(); renderBanner(); save();
+}
+
+// ---------------- board DOM ----------------
+var cells = [];
+function buildBoard() {
+  var b = $("#board");
+  for (var i = 0; i < 81; i++) {
+    var c = el("div", { class: "cell r" + SE.ROW[i], "data-i": i });
+    var v = el("span", { class: "v" }), n = el("div", { class: "notes" });
+    for (var d = 1; d <= 9; d++) n.appendChild(el("span"));
+    c.appendChild(v); c.appendChild(n);
+    c.addEventListener("pointerdown", (function (ii) { return function (e) { e.preventDefault(); select(ii); }; })(i));
+    b.appendChild(c); cells.push(c);
+  }
+  var pad = $("#pad");
+  for (d = 1; d <= 9; d++) {
+    pad.appendChild(el("button", { class: "num", "data-d": d, onclick: (function (dd) { return function () { inputDigit(dd); }; })(d) }, [String(d), el("small")]));
+  }
+}
+function curVal(i) { return G.giv[i] || G.vals[i]; }
+function conflictAt(i) {
+  var v = curVal(i); if (!v) return false;
+  for (var p = 0; p < 20; p++) if (curVal(SE.PEERS[i][p]) === v) return true;
+  return false;
+}
+function render() {
+  if (!G) return;
+  var E = G.entry, hv = HINT ? HINT.view : null, selV = sel >= 0 ? curVal(sel) : 0;
+  var unitSet = {};
+  if (hv) hv.units.forEach(function (u) { SE.UNITS[u].forEach(function (x) { unitSet[x] = 1; }); });
+  var mk = function (arr) { var o = {}; (arr || []).forEach(function (x) { o[x] = 1; }); return o; };
+  var pat = mk(hv && hv.pat), tgt = mk(hv && hv.tgt), cA = mk(hv && hv.cA), cB = mk(hv && hv.cB);
+  var noteMark = {};
+  if (hv) {
+    (hv.nm || []).forEach(function (q) { noteMark[q[0] * 10 + q[1]] = "nm"; });
+    (hv.ne || []).forEach(function (q) { noteMark[q[0] * 10 + q[1]] = "ne"; });
+    (hv.np || []).forEach(function (q) { noteMark[q[0] * 10 + q[1]] = "np"; });
+  }
+  var rings = {};
+  if (LIVE && LIVE.mode === "coop") LIVE.peers.forEach(function (p) {
+    if (!p.sameTab && p.presence && p.presence.pid === G.pid && typeof p.presence.sel === "number" && p.presence.sel >= 0) rings[p.presence.sel] = peerColor(p.peer);
+  });
+  for (var i = 0; i < 81; i++) {
+    var c = cells[i], v = curVal(i), cls = "cell r" + SE.ROW[i];
+    if (G.giv[i]) cls += " given";
+    if (hv) {
+      if (cA[i]) cls += " cA"; else if (cB[i]) cls += " cB"; else if (tgt[i]) cls += " tgt"; else if (pat[i]) cls += " pat"; else if (unitSet[i]) cls += " hl";
+      if (i === sel) cls += " sel";
+    } else if (sel >= 0) {
+      if (i === sel) cls += " sel";
+      else if (S.same && selV && v === selV) cls += " same";
+      else if (SE.ROW[i] === SE.ROW[sel] || SE.COL[i] === SE.COL[sel] || SE.BOX[i] === SE.BOX[sel]) cls += " hl";
+    }
+    if (!E && v && !G.giv[i]) {
+      if (S.mist === "sol" && v !== G.sol[i]) cls += " err";
+      else if (S.mist !== "off" && conflictAt(i)) cls += " err";
+    }
+    if (E && v && conflictAt(i)) cls += " err errbg";
+    if (c.className !== cls) c.className = cls;
+    c.firstChild.textContent = v ? v : "";
+    var ns = c.childNodes[1].childNodes, nm = v ? 0 : G.notes[i];
+    for (var d = 1; d <= 9; d++) {
+      var on = nm & SE.bit(d), s = ns[d - 1];
+      var t2 = on ? d : (noteMark[i * 10 + d] === "np" ? d : "");
+      if (s.textContent != t2) s.textContent = t2;
+      var nc = (on || t2) && noteMark[i * 10 + d] ? noteMark[i * 10 + d] : (on && S.same && selV === d && !hv ? "nm" : "");
+      if (s.className !== nc) s.className = nc;
+    }
+    var ring = c.querySelector(".ring");
+    if (rings[i]) { if (!ring) { ring = el("div", { class: "ring" }); c.appendChild(ring); } ring.style.setProperty("--pc", rings[i]); }
+    else if (ring) ring.remove();
+  }
+  var cnt = new Array(10).fill(0);
+  for (i = 0; i < 81; i++) cnt[curVal(i)]++;
+  document.querySelectorAll(".num").forEach(function (b) {
+    var d = +b.dataset.d, left = 9 - cnt[d];
+    b.classList.toggle("full", left <= 0 && !E);
+    b.lastChild.textContent = E ? "" : (left > 0 ? left : "");
+  });
+  $(".app").classList.toggle("notesmode", notesMode);
+  $("#tNotes").classList.toggle("on", notesMode);
+  $("#pill").textContent = E ? t("typeIn") : diffName(G.diff) + (G.label ? " · " + G.label : "");
+  $("#hintBadge").textContent = G.hints || "";
+  $("#hintBadge").classList.toggle("hidden", !G.hints);
+  $("#entrybar").classList.toggle("hidden", !E);
+  $("#tools").classList.toggle("hidden", !!E);
+  renderTimer();
+}
+
+// ---------------- input ----------------
+function select(i) {
+  if (!G) return;
+  sel = i;
+  if (LIVE && LIVE.mode === "coop") publishPresence();
+  render();
+}
+function blocked() { return !G || coverMode || paused; }
+function inputDigit(d, forceNote) {
+  if (blocked() || sel < 0) return;
+  if (G.entry) {
+    G.giv[sel] = G.giv[sel] === d ? 0 : d; render(); return;
+  }
+  if (G.done || G.giv[sel]) return;
+  if (notesMode || forceNote) {
+    if (G.vals[sel]) return;
+    commit([chg(sel, G.vals[sel], G.notes[sel] ^ SE.bit(d))]);
+  } else setValue(sel, G.vals[sel] === d ? 0 : d);
+}
+function chg(i, v, n) { return { i: i, b: { v: G.vals[i], n: G.notes[i] }, a: { v: v, n: n } }; }
+function setValue(i, d, extra) {
+  var ch = [chg(i, d, G.notes[i])];
+  if (d && S.autoNotes) SE.PEERS[i].forEach(function (p) {
+    if (!G.giv[p] && !G.vals[p] && (G.notes[p] & SE.bit(d))) ch.push(chg(p, 0, G.notes[p] & ~SE.bit(d)));
+  });
+  if (d && d !== G.sol[i]) G.mist++;
+  commit(ch.concat(extra || []));
+}
+function commit(ch, keepHint) {
+  if (!ch.length) return;
+  ch.forEach(function (c) { G.vals[c.i] = c.a.v; G.notes[c.i] = c.a.n; G.ts[c.i] = ++G.clock; });
+  HIST.push(ch); if (HIST.length > 400) HIST.shift();
+  if (!keepHint) { HINT = null; renderHint(); }
+  afterChange();
+}
+function afterChange() {
+  save(); render(); publishPresence(); checkDone();
+}
+function undo() {
+  if (blocked() || G.done || G.entry) return;
+  var ch = HIST.pop(); if (!ch) return;
+  ch.forEach(function (c) { G.vals[c.i] = c.b.v; G.notes[c.i] = c.b.n; G.ts[c.i] = ++G.clock; });
+  HINT = null; renderHint(); afterChange();
+}
+function erase() {
+  if (blocked() || sel < 0) return;
+  if (G.entry) { G.giv[sel] = 0; render(); return; }
+  if (G.done || G.giv[sel]) return;
+  if (G.vals[sel]) commit([chg(sel, 0, G.notes[sel])]);
+  else if (G.notes[sel]) commit([chg(sel, 0, 0)]);
+}
+function candState() {
+  var st = SE.newState(G.giv.map(function (g, i) { return g || G.vals[i]; }));
+  G.elims.forEach(function (k) { st.c[k[0]] &= ~SE.bit(k[1]); });
+  return st;
+}
+function fillNotesChanges() {
+  var st = candState(), ch = [];
+  for (var i = 0; i < 81; i++) if (!curVal(i) && G.notes[i] !== st.c[i]) ch.push(chg(i, 0, st.c[i]));
+  return ch;
+}
+function fillNotes() { if (G && !G.done && !G.entry) { commit(fillNotesChanges()); toast(t("cleared")); } }
+function clearNotes() {
+  if (!G || G.done) return;
+  var ch = []; for (var i = 0; i < 81; i++) if (G.notes[i]) ch.push(chg(i, G.vals[i], 0));
+  commit(ch);
+}
+function checkDone() {
+  if (!G || G.done || G.entry) return;
+  for (var i = 0; i < 81; i++) if (!curVal(i)) { G.fullWarned = false; return; }
+  for (i = 0; i < 81; i++) if (curVal(i) !== G.sol[i]) {
+    if (!G.fullWarned) { G.fullWarned = true; toast(t("fullWrong")); }
+    return;
+  }
+  win();
+}
+function moveSel(dr, dc) {
+  if (sel < 0) { select(40); return; }
+  var r = (SE.ROW[sel] + dr + 9) % 9, c = (SE.COL[sel] + dc + 9) % 9;
+  select(r * 9 + c);
+}
+document.addEventListener("keydown", function (e) {
+  if (e.target.closest && e.target.closest("input,textarea,select")) return;
+  if ($(".overlay")) { if (e.key === "Escape") closeModal(); return; }
+  var k = e.key;
+  if ((e.ctrlKey || e.metaKey) && k.toLowerCase() === "z") { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var code = e.code || "";
+  var m = /^(Digit|Numpad)([1-9])$/.exec(code);
+  if (m) { e.preventDefault(); inputDigit(+m[2], e.shiftKey); return; }
+  if (/^[1-9]$/.test(k)) { inputDigit(+k); return; }
+  if (k === "Backspace" || k === "Delete" || k === "0") { e.preventDefault(); erase(); return; }
+  if (k === "ArrowUp") { e.preventDefault(); moveSel(-1, 0); }
+  else if (k === "ArrowDown") { e.preventDefault(); moveSel(1, 0); }
+  else if (k === "ArrowLeft") { e.preventDefault(); moveSel(0, -1); }
+  else if (k === "ArrowRight") { e.preventDefault(); moveSel(0, 1); }
+  else if (k === "n" || k === "N") toggleNotes();
+  else if (k === "h" || k === "H") hintPress();
+});
+function toggleNotes() { notesMode = !notesMode; render(); }
+
+// ---------------- timer & covers ----------------
+var lastTick = Date.now();
+function running() { return G && !G.entry && !G.done && !paused && !coverMode && !document.hidden; }
+setInterval(function () {
+  var now = Date.now(), dt = now - lastTick; lastTick = now;
+  if (running() && dt < 5000) { G.el += dt; renderTimer(); if (Math.random() < 0.05) save(); }
+}, 250);
+function renderTimer() { $("#time").textContent = G && !G.entry ? fmt(G.el) : "–:––"; $("#pauseIcon").classList.toggle("hidden", paused); $("#playIcon").classList.toggle("hidden", !paused); }
+function togglePause() {
+  if (!G || G.done || G.entry || (LIVE && LIVE.mode === "race")) return;
+  paused = !paused;
+  if (paused) setCover("pause"); else setCover(null);
+  renderTimer();
+}
+document.addEventListener("visibilitychange", function () { lastTick = Date.now(); });
+function setCover(mode, opts) {
+  coverMode = mode;
+  var c = $("#cover");
+  c.classList.toggle("hidden", !mode);
+  c.innerHTML = "";
+  if (!mode) return;
+  if (mode === "pause") {
+    c.appendChild(el("h2", { text: t("paused") }));
+    c.appendChild(el("p", { text: t("tapResume") }));
+    c.appendChild(el("button", { class: "btn pri", text: t("resume"), onclick: togglePause }));
+  } else if (mode === "gen") {
+    c.appendChild(el("div", { class: "spin" }));
+    c.appendChild(el("h2", { text: t("generating") }));
+    c.appendChild(el("p", { text: t("genSub") }));
+  } else if (mode === "lobby") {
+    var me = LIVE && LIVE.ready;
+    c.appendChild(el("h2", { text: t("liveRace") }));
+    c.appendChild(el("p", { text: (opts && opts.inProgress) ? t("raceOn") : t("waitingP") }));
+    c.appendChild(el("button", { class: "btn pri", text: me ? t("readyWait") : t("ready"), disabled: me ? "disabled" : null, onclick: function () { LIVE.ready = true; publishPresence(); setCover("lobby"); checkRaceStart(); } }));
+    c.appendChild(el("button", { class: "btn", text: t("inviteT"), onclick: function () { showInvite("race"); } }));
+    c.appendChild(el("button", { class: "btn", text: t("leave"), onclick: leaveLive }));
+  } else if (mode === "count") {
+    c.appendChild(el("div", { class: "count", text: String(opts.n) }));
+  } else if (mode === "racewait") {
+    c.appendChild(el("h2", { text: fmt(G.el) }));
+    c.appendChild(el("p", { text: t("raceWait") }));
+  }
+}
+
+// ---------------- generation ----------------
+var W, wSeq = 0, wCbs = {};
+function worker() {
+  if (W !== undefined) return W;
+  try {
+    var src = $("#engine").textContent + "\nonmessage=function(e){var g=SE.generate(e.data.seed,e.data.level);postMessage({id:e.data.id,g:g});};";
+    W = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+    W.onmessage = function (e) { var cb = wCbs[e.data.id]; delete wCbs[e.data.id]; if (cb) cb(e.data.g); };
+    W.onerror = function () { var cbs = wCbs; wCbs = {}; W = null; for (var k in cbs) cbs[k](null, true); };
+  } catch (e) { W = null; }
+  return W;
+}
+function generate(seed, level) {
+  return new Promise(function (res) {
+    var done = false, fin = function (g) { if (!done) { done = true; res(g); } };
+    var main = function () { setTimeout(function () { fin(SE.generate(seed, level)); }, 30); };
+    var w = worker();
+    if (!w) return main();
+    var id = ++wSeq;
+    wCbs[id] = function (g, failed) { if (failed) main(); else fin(g); };
+    w.postMessage({ id: id, seed: seed, level: level });
+    setTimeout(function () { if (!done && wCbs[id]) { delete wCbs[id]; main(); } }, 20000);
+  });
+}
+function startGenerated(seed, level, label) {
+  closeModal();
+  if (LIVE) leaveLive();
+  setCover("gen");
+  generate(seed, level).then(function (g) {
+    setCover(null);
+    if (!g) { toast("Error"); return; }
+    var pid = pidOf(g.puzzle), old = loadSaved(pid);
+    setGame(old || fresh(g.puzzle, g.solution, level, label));
+  });
+}
+function newRandom(level) { startGenerated("r" + Date.now() + Math.random(), level, ""); }
+function newDaily(level) {
+  var day = utcDate();
+  startGenerated("daily-" + day, level, t("daily") + " " + day.slice(5).split("-").reverse().join("."));
+}
+
+// ---------------- hints ----------------
+function coverage() {
+  var empty = 0, noted = 0;
+  for (var i = 0; i < 81; i++) if (!curVal(i)) { empty++; if (G.notes[i]) noted++; }
+  return empty ? noted / empty : 1;
+}
+function hintStep() {
+  var wrong = [];
+  for (var i = 0; i < 81; i++) if (G.vals[i] && G.vals[i] !== G.sol[i]) wrong.push(i);
+  if (wrong.length) return { st: null, step: { t: "mistake", cells: wrong } };
+  var st = candState();
+  if (coverage() >= 0.8) {
+    for (i = 0; i < 81; i++) if (!curVal(i) && G.notes[i]) {
+      if (!(G.notes[i] & SE.bit(G.sol[i]))) return { st: st, step: { t: "badNote", cells: [i], d: G.sol[i] } };
+      st.c[i] &= G.notes[i];
+    }
+  }
+  var s = SE.findStep(st);
+  if (!s) {
+    var best = -1, bn = 10;
+    for (i = 0; i < 81; i++) if (!curVal(i) && SE.PC[st.c[i]] < bn) { bn = SE.PC[st.c[i]]; best = i; }
+    s = { t: "reveal", cells: [best], d: G.sol[best], place: [[best, G.sol[best]]] };
+  }
+  return { st: st, step: s };
+}
+function hintPress() {
+  if (blocked() || !G || G.done || G.entry) return;
+  var h = hintStep(), key = JSON.stringify([h.step.t, h.step.cells, h.step.elim, h.step.place, h.step.d]);
+  if (HINT && HINT.key === key) HINT.level = Math.min(3, HINT.level + 1);
+  else { HINT = { key: key, step: h.step, st: h.st, level: h.step.t === "reveal" ? 3 : 1 }; G.hints++; save(); }
+  HINT.view = HINTS.build(HINT.step, HINT.level, L(), { st: HINT.st });
+  renderHint(); render();
+}
+function renderHint() {
+  var box = $("#hint");
+  if (!HINT) { box.classList.add("hidden"); render(); return; }
+  HINT.view = HINTS.build(HINT.step, HINT.level, L(), { st: HINT.st });
+  box.classList.remove("hidden"); box.innerHTML = "";
+  box.appendChild(el("h3", null, [HINT.view.title, el("span", { class: "lv", text: t("lvl", { n: HINT.level }) })]));
+  box.appendChild(el("p", { text: HINT.view.text }));
+  if (HINT.level >= 2 && HINT.step.elim && coverage() < 0.8) box.appendChild(el("p", { class: "legend", text: t("noteTip") }));
+  if (HINT.level >= 2 && /R|Z/.test(HINT.view.text)) box.appendChild(el("div", { class: "legend", text: t("legend") }));
+  var row = el("div", { class: "row" });
+  if (HINT.level < 3) row.appendChild(el("button", { class: "btn pri", text: t("moreHelp"), onclick: hintPress }));
+  else row.appendChild(el("button", { class: "btn pri", text: t("apply"), onclick: applyHint }));
+  row.appendChild(el("button", { class: "btn", text: t("close"), onclick: function () { HINT = null; renderHint(); } }));
+  box.appendChild(row);
+}
+function applyHint() {
+  if (!HINT || blocked()) return;
+  var s = HINT.step, ch = [];
+  if (s.t === "mistake") {
+    s.cells.forEach(function (i) { ch.push(chg(i, 0, G.notes[i])); });
+    HINT = null; commit(ch); toast(t("mistakeShown")); return;
+  }
+  if (s.t === "badNote") { HINT = null; commit([chg(s.cells[0], 0, G.notes[s.cells[0]] | SE.bit(s.d))]); return; }
+  if (s.place) { var p = s.place[0]; HINT = null; renderHint(); setValue(p[0], p[1]); return; }
+  if (s.elim) {
+    var notes = G.notes.slice();
+    if (coverage() < 0.8) { ch = fillNotesChanges(); ch.forEach(function (c) { notes[c.i] = c.a.n; }); }
+    s.elim.forEach(function (e) {
+      G.elims.push([e[0], e[1]]);
+      var nn = notes[e[0]] & ~SE.bit(e[1]);
+      var ex = ch.filter(function (c) { return c.i === e[0]; })[0];
+      if (ex) ex.a.n = nn; else if (nn !== notes[e[0]]) ch.push(chg(e[0], 0, nn));
+      notes[e[0]] = nn;
+    });
+    HINT = null; renderHint();
+    if (ch.length) commit(ch); else { save(); render(); }
+  }
+}
+
+// ---------------- codes & sharing ----------------
+function encode(o) {
+  o = o || {};
+  var s = "S" + G.giv.join("") + "-d" + (DCH[G.diff] || "c");
+  if (o.prog) {
+    s += "-v" + G.vals.join("");
+    if (G.notes.some(function (n, i) { return n && !curVal(i); })) s += "-n" + G.notes.map(function (n, i) { return (curVal(i) ? 0 : n).toString(36).padStart(2, "0"); }).join("");
+    if (G.elims.length) s += "-x" + G.elims.map(function (e) { return e[0].toString(36).padStart(2, "0") + e[1]; }).join("");
+  }
+  if (o.time) s += "-t" + Math.round(o.time).toString(36);
+  var nm = (S.name || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 16);
+  if (o.time && nm) s += "-a" + nm;
+  if (o.live) s += "-l" + (o.live === "coop" ? "c" : "r");
+  if (G.label) { var m = /(\d\d)\.(\d\d)/.exec(G.label); if (m) s += "-q" + m[2] + m[1]; }
+  return s;
+}
+function linkFor(code) {
+  if (ARTIFACT_URL.indexOf("http") === 0) return ARTIFACT_URL + "#" + code;
+  if (/^https?:/.test(location.protocol)) return location.origin + location.pathname + "#" + code;
+  return code;
+}
+function parseCode(raw) {
+  raw = (raw || "").trim();
+  if (raw.indexOf("#") >= 0) raw = raw.slice(raw.lastIndexOf("#") + 1);
+  raw = raw.replace(/\s+/g, "");
+  var m = /^S([0-9]{81})((?:-[a-z][A-Za-z0-9]*)*)$/.exec(raw);
+  if (!m) return null;
+  var o = { giv: m[1].split("").map(Number) };
+  m[2].split("-").filter(Boolean).forEach(function (seg) {
+    var k = seg[0], v = seg.slice(1);
+    if (k === "d") o.diff = CHD[v] || "custom";
+    else if (k === "v" && /^[0-9]{81}$/.test(v)) o.vals = v.split("").map(Number);
+    else if (k === "n" && v.length === 162) { o.notes = []; for (var i = 0; i < 81; i++) o.notes.push((parseInt(v.substr(i * 2, 2), 36) || 0) & 511); }
+    else if (k === "x" && v.length % 3 === 0) { o.elims = []; for (var j = 0; j < v.length; j += 3) { var c = parseInt(v.substr(j, 2), 36), d = +v[j + 2]; if (c >= 0 && c < 81 && d >= 1 && d <= 9) o.elims.push([c, d]); } }
+    else if (k === "t") o.time = parseInt(v, 36);
+    else if (k === "a") o.name = v.slice(0, 16);
+    else if (k === "l") o.live = v === "c" ? "coop" : v === "r" ? "race" : null;
+    else if (k === "q" && /^\d{4}$/.test(v)) o.label = t("daily") + " " + v.slice(2) + "." + v.slice(0, 2);
+  });
+  return o;
+}
+function openCode(raw, quiet) {
+  var o = parseCode(raw);
+  if (!o) { if (!quiet) toast(t("badCode")); return false; }
+  var r = SE.solve(o.giv, 2);
+  if (r.count !== 1) { toast(r.count ? t("multiSol") : t("noSol")); return false; }
+  closeModal();
+  if (LIVE) leaveLive();
+  var pid = pidOf(o.giv), g = loadSaved(pid);
+  if (!g || o.vals) {
+    g = fresh(o.giv, r.solution, o.diff || "custom", o.label || "");
+    if (o.vals) o.vals.forEach(function (v, i) { if (!o.giv[i] && v) { g.vals[i] = v; g.ts[i] = 1; } });
+    if (o.notes) o.notes.forEach(function (n, i) { if (!o.giv[i]) { g.notes[i] = n; g.ts[i] = 1; } });
+    if (o.elims) g.elims = o.elims;
+    g.clock = 1;
+  }
+  if (o.time) g.chal = { ms: o.time, name: o.name || "" };
+  setGame(g);
+  toast(t("opened"));
+  if (o.live) whenCaps(function () { startLive(o.live, true); });
+  return true;
+}
+var lastHash = "";
+function checkHash() {
+  var h = (location.hash || "").slice(1);
+  if (h && h !== lastHash && h[0] === "S") { lastHash = h; return openCode(h, true); }
+  return false;
+}
+window.addEventListener("hashchange", checkHash);
+function copyText(txt, ta) {
+  var ok = function () { toast(t("copied")); };
+  var bad = function () { if (ta) { ta.focus(); ta.select(); } try { if (document.execCommand("copy")) return ok(); } catch (e) {} toast(t("copyFail")); };
+  try { navigator.clipboard.writeText(txt).then(ok, bad); } catch (e) { bad(); }
+}
+function shareBox(code) {
+  var link = linkFor(code), ta = el("textarea", { readonly: "readonly" }); ta.value = link;
+  var wrap = el("div", { class: "stack" }, [ta,
+    el("div", { class: "grid2" }, [
+      el("button", { class: "btn pri", text: t("copyLink"), onclick: function () { copyText(link, ta); } }),
+      el("button", { class: "btn", text: t("copyCode"), onclick: function () { copyText(code, ta); } })]),
+    el("p", { text: t("linkNote") })]);
+  return wrap;
+}
+
+// ---------------- modals ----------------
+function modal(build) {
+  closeModal();
+  var sh = el("div", { class: "sheet" }), ov = el("div", { class: "overlay", onclick: function (e) { if (e.target === ov) closeModal(); } }, [sh]);
+  build(sh); document.body.appendChild(ov);
+}
+function closeModal() { var o = $(".overlay"); if (o) o.remove(); }
+var toastT;
+function toast(msg) {
+  var o = $(".toast"); if (o) o.remove(); clearTimeout(toastT);
+  var e = el("div", { class: "toast", text: msg }); document.body.appendChild(e);
+  toastT = setTimeout(function () { e.remove(); }, 2600);
+}
+function choice(title, sub, fn, cls) { return el("button", { class: "choice " + (cls || ""), onclick: fn }, [el("b", { text: title }), sub ? el("span", { text: sub }) : null]); }
+
+function showNew() {
+  var lvl = ls("sd.lastLevel") || "hard";
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("newGame") }));
+    var g = el("div", { class: "grid2" });
+    var draw = function () {
+      g.innerHTML = "";
+      DIFFS.forEach(function (d) { g.appendChild(choice(t(d), t(d + "D"), function () { lvl = d; ls("sd.lastLevel", d); draw(); }, d === lvl ? "sel" : "")); });
+    };
+    draw(); sh.appendChild(g);
+    sh.appendChild(el("div", { class: "grid2", style: "margin-top:10px" }, [
+      el("button", { class: "btn pri block", text: t("random"), onclick: function () { newRandom(lvl); } }),
+      el("button", { class: "btn block", text: t("dailyH"), onclick: function () { newDaily(lvl); } })]));
+    sh.appendChild(el("p", { text: t("dailyP") }));
+    sh.appendChild(el("h4", { text: t("nMore") }));
+    var codeBox = el("div", { class: "stack hidden" });
+    var ta = el("textarea", { placeholder: "https://…#S…" });
+    codeBox.appendChild(ta);
+    codeBox.appendChild(el("button", { class: "btn pri", text: t("open"), onclick: function () { openCode(ta.value); } }));
+    sh.appendChild(el("div", { class: "stack" }, [
+      choice(t("typeIn"), t("typeInD"), startEntry),
+      choice(t("openCode"), t("openCodeD"), function () { codeBox.classList.toggle("hidden"); ta.focus(); }),
+      codeBox]));
+  });
+}
+function showMenu() {
+  modal(function (sh) {
+    var item = function (icon, title, sub, fn) { return choice(icon + "  " + title, sub, function () { closeModal(); fn(); }); };
+    sh.appendChild(el("div", { class: "stack" }, [
+      item("＋", t("nNew"), t("newGame"), showNew),
+      item("↗", t("nShare"), t("shareT"), showShare),
+      item("👥", t("nTogether"), t("togetherT"), showTogether),
+      item("⚙", t("settings"), t("fillNotes") + " · " + t("stats"), showMore)]));
+  });
+}
+function showShare() {
+  if (!G || G.entry) return;
+  var prog = G.vals.some(Boolean) || G.notes.some(Boolean);
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("shareT") }));
+    sh.appendChild(el("p", { text: t("shareP") }));
+    var holder = el("div");
+    var sw = el("div", { class: "switch" + (prog ? " on" : "") });
+    var draw = function () { holder.innerHTML = ""; holder.appendChild(shareBox(encode({ prog: prog }))); sw.className = "switch" + (prog ? " on" : ""); };
+    sh.appendChild(el("div", { class: "setrow", onclick: function () { prog = !prog; draw(); } }, [el("div", null, [el("div", { text: t("withProg") }), el("div", { class: "legend", text: t("withProgD") })]), sw]));
+    sh.appendChild(el("div", { style: "height:10px" }));
+    sh.appendChild(holder); draw();
+  });
+}
+function showTogether() {
+  if (!G || G.entry) return;
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("togetherT") }));
+    sh.appendChild(el("div", { class: "stack" }, [
+      choice("🤝 " + t("coop"), t("coopD"), function () { startLive("coop"); }),
+      choice("🏁 " + t("race"), t("raceD"), function () { startLive("race"); }),
+      choice("⏱️ " + t("challenge"), t("challengeD"), function () { G.done ? showChallenge() : showShare(); }),
+      choice("🏆 " + t("board"), t("boardD"), showLeaderboard)]));
+    sh.appendChild(el("h4", { text: t("tipsT") }));
+    sh.appendChild(el("p", { text: t("tips") }));
+  });
+}
+function showChallenge() {
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("sendChallenge") }));
+    sh.appendChild(el("div", { class: "big", text: fmt(G.el) }));
+    sh.appendChild(shareBox(encode({ time: G.el })));
+  });
+}
+function showInvite(mode) {
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("inviteT") }));
+    sh.appendChild(el("p", { text: t("inviteP") }));
+    sh.appendChild(shareBox(encode({ live: mode, prog: mode === "coop" })));
+    sh.appendChild(el("h4", { text: t("tipsT") }));
+    sh.appendChild(el("p", { text: t("tips") }));
+  });
+}
+function toggleRow(label, key) {
+  var sw = el("div", { class: "switch" + (S[key] ? " on" : "") });
+  return el("div", { class: "setrow", onclick: function () { S[key] = !S[key]; saveS(); sw.className = "switch" + (S[key] ? " on" : ""); render(); } }, [el("span", { text: label }), sw]);
+}
+function selectRow(label, key, opts) {
+  var s = el("select", { onchange: function () { S[key] = s.value; saveS(); applyLang(); render(); renderHint(); if (key === "lang") showMore(); } });
+  opts.forEach(function (o) { var op = el("option", { value: o[0], text: o[1] }); if (S[key] === o[0]) op.selected = true; s.appendChild(op); });
+  return el("div", { class: "setrow" }, [el("span", { text: label }), s]);
+}
+function showMore() {
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("settings") }));
+    sh.appendChild(el("div", { class: "grid2", style: "margin:8px 0" }, [
+      el("button", { class: "btn", text: t("fillNotes"), onclick: function () { closeModal(); fillNotes(); } }),
+      el("button", { class: "btn", text: t("clearNotes"), onclick: function () { closeModal(); clearNotes(); } }),
+      el("button", { class: "btn", text: t("stats"), onclick: showStats }),
+      el("button", { class: "btn", text: t("restart"), onclick: function () {
+        modal(function (s2) {
+          s2.appendChild(el("h2", { text: t("restartQ") }));
+          s2.appendChild(el("div", { class: "grid2" }, [
+            el("button", { class: "btn pri", text: t("ok"), onclick: function () { closeModal(); var ch = []; for (var i = 0; i < 81; i++) if (G.vals[i] || G.notes[i]) ch.push(chg(i, 0, 0)); G.elims = []; G.done = false; G.el = 0; $("#board").classList.remove("win"); commit(ch); } }),
+            el("button", { class: "btn", text: t("cancel"), onclick: closeModal })]));
+        });
+      } })]));
+    sh.appendChild(selectRow(t("language"), "lang", [["auto", t("auto")], ["en", "English"], ["de", "Deutsch"]]));
+    sh.appendChild(selectRow(t("mistakesMode"), "mist", [["off", t("mOff")], ["conf", t("mConf")], ["sol", t("mSol")]]));
+    sh.appendChild(toggleRow(t("autoNotes"), "autoNotes"));
+    sh.appendChild(toggleRow(t("sameHl"), "same"));
+    var nm = el("input", { type: "text", maxlength: "16", value: S.name || "", placeholder: "Nick", oninput: function () { S.name = nm.value.replace(/[^A-Za-z0-9]/g, ""); saveS(); }, onchange: pushName });
+    sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("yourName") })]));
+    sh.appendChild(nm);
+    sh.appendChild(el("h4", { text: t("tipsT") }));
+    sh.appendChild(el("p", { text: t("tips") }));
+    sh.appendChild(el("p", { class: "legend", text: "Keyboard: 1–9 · Shift+1–9 = note · N = notes · H = hint · arrows · Backspace · Ctrl+Z" }));
+  });
+}
+function showStats() {
+  var res = ls("sd.results") || [];
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("statsT") }));
+    if (!res.length) { sh.appendChild(el("p", { text: t("none") })); return; }
+    var tb = el("table");
+    tb.appendChild(el("tr", null, [el("th"), el("th", { text: t("played") }), el("th", { text: t("best"), class: "n" }), el("th", { text: t("avg"), class: "n" })]));
+    DIFFS.concat(["custom"]).forEach(function (d) {
+      var rs = res.filter(function (r) { return r.lv === d && !r.c; });
+      if (!rs.length) return;
+      var ms = rs.map(function (r) { return r.ms; });
+      tb.appendChild(el("tr", null, [el("td", { text: diffName(d) }), el("td", { text: String(rs.length) }),
+        el("td", { class: "n", text: fmt(Math.min.apply(null, ms)) }), el("td", { class: "n", text: fmt(ms.reduce(function (a, b) { return a + b; }, 0) / ms.length) })]));
+    });
+    sh.appendChild(tb);
+  });
+}
+
+// ---------------- entry mode ----------------
+var preEntry = null;
+function startEntry() {
+  closeModal(); if (LIVE) leaveLive();
+  preEntry = G;
+  G = { entry: true, giv: new Array(81).fill(0), vals: new Array(81).fill(0), notes: new Array(81).fill(0), sol: [], elims: [] };
+  HINT = null; sel = 0; notesMode = false; setCover(null); renderHint(); render();
+  renderBanner();
+}
+function cancelEntry() { G = preEntry; preEntry = null; sel = -1; render(); renderBanner(); if (!G) newDaily("medium"); }
+function finishEntry() {
+  var giv = G.giv, n = giv.filter(Boolean).length;
+  for (var i = 0; i < 81; i++) if (conflictAt(i)) { toast(t("conflictEntry")); return; }
+  if (n < 17) { toast(t("tooFew")); return; }
+  var r = SE.solve(giv, 2);
+  if (r.count !== 1) { toast(r.count ? t("multiSol") : t("noSol")); return; }
+  var rating = SE.rate(giv), lv = rating.solved ? DIFFS[rating.maxLevel - 1] : "custom";
+  preEntry = null;
+  setGame(fresh(giv, r.solution, lv, t("custom")));
+}
+function pasteEntry() {
+  modal(function (sh) {
+    var ta = el("textarea", { placeholder: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79" });
+    sh.appendChild(el("h2", { text: t("typeIn") }));
+    sh.appendChild(el("p", { text: t("paste") }));
+    sh.appendChild(ta);
+    sh.appendChild(el("button", { class: "btn pri block", style: "margin-top:8px", text: t("ok"), onclick: function () {
+      var s = ta.value.replace(/[^0-9.]/g, "").replace(/\./g, "0");
+      if (s.length !== 81) { toast("81?"); return; }
+      G.giv = s.split("").map(Number); closeModal(); render();
+    } }));
+  });
+}
+
+// ---------------- win ----------------
+function win() {
+  G.done = true; HINT = null; renderHint();
+  $("#board").classList.add("win");
+  var coop = LIVE && LIVE.mode === "coop" && livePeers().length > 0;
+  var res = ls("sd.results") || [];
+  if (!res.some(function (r) { return r.pid === G.pid && r.ms === G.el; })) {
+    res.push({ pid: G.pid, lv: G.diff, ms: G.el, h: G.hints, m: G.mist, c: coop ? 1 : 0, at: Date.now() });
+    ls("sd.results", res.slice(-500));
+  }
+  save(); render(); publishPresence();
+  saveTime(coop);
+  if (LIVE && LIVE.mode === "race") { LIVE.phase = "done"; publishPresence(); renderPeers(); }
+  var g0 = G;
+  setTimeout(function () { if (G === g0 && G.done && !$(".overlay")) showWin(); }, 650);
+}
+function showWin() {
+  modal(function (sh) {
+    sh.appendChild(el("h2", { class: "center", text: "🎉 " + t("solved") }));
+    sh.appendChild(el("div", { class: "big", text: fmt(G.el) }));
+    sh.appendChild(el("p", { class: "center", text: diffName(G.diff) + " · " + t("hintsUsed") + ": " + G.hints + " · " + t("mistakes") + ": " + G.mist }));
+    if (G.chal) {
+      var diff = G.el - G.chal.ms;
+      sh.appendChild(el("div", { class: "banner" }, [diff < 0 ? "🏆 " + t("youWon", { t: fmt(-diff) }) : "⏱️ " + t("youLost", { t: fmt(diff) })]));
+    }
+    if (LIVE && LIVE.mode === "race") sh.appendChild(raceTable());
+    sh.appendChild(el("div", { class: "stack", style: "margin-top:12px" }, [
+      el("button", { class: "btn pri block", text: t("sendChallenge"), onclick: showChallenge }),
+      el("div", { class: "grid2" }, [
+        el("button", { class: "btn", text: "🏆 " + t("board"), onclick: showLeaderboard }),
+        el("button", { class: "btn", text: t("newPuzzle"), onclick: showNew })])]));
+  });
+}
+
+// ---------------- capabilities: room / db / user ----------------
+var ROOM = null, DB = null, USER = null, MYID = null, capsReady = false, capsWait = [];
+function whenCaps(fn) { if (capsReady) fn(); else capsWait.push(fn); }
+(function initCaps() {
+  var fin = function () { capsReady = true; capsWait.splice(0).forEach(function (f) { try { f(); } catch (e) {} }); };
+  if (!window.claude || typeof window.claude.use !== "function") { setTimeout(fin, 0); return; }
+  Promise.all([claude.use("room"), claude.use("db"), claude.use("user")].map(function (p) { return Promise.resolve(p).catch(function () { return null; }); }))
+    .then(function (r) {
+      ROOM = r[0]; DB = r[1]; USER = r[2];
+      if (USER) return Promise.resolve(USER.id()).then(function (id) { MYID = id || null; }, function () {});
+    }).then(fin, fin);
+})();
+var NAMES = {};
+function resolveNames(ids) {
+  ids = ids.filter(function (x) { return x && !(x in NAMES); });
+  if (!ids.length || !USER || !USER.profiles) return Promise.resolve();
+  ids.forEach(function (x) { NAMES[x] = ""; });
+  return Promise.resolve(USER.profiles(ids)).then(function (ps) {
+    ids.forEach(function (x) { NAMES[x] = (ps && ps[x] && ps[x].name) || ""; });
+  }, function () {});
+}
+function nameOf(id) { return (id && NAMES[id]) || t("player"); }
+var PALETTE = ["#e0603a", "#2f8f5b", "#7b5cd6", "#d1366f", "#1f8fb3", "#c48a12"];
+function peerColor(peer) { var h = 0; for (var i = 0; i < peer.length; i++) h = (h * 31 + peer.charCodeAt(i)) | 0; return PALETTE[Math.abs(h) % PALETTE.length]; }
+
+// live
+var LIVE = null;
+function livePeers() {
+  if (!LIVE) return [];
+  return LIVE.peers.filter(function (p) { return !p.sameTab && p.kind === "viewer" && p.presence && p.presence.pid === G.pid && p.presence.mode === LIVE.mode; });
+}
+function startLive(mode, fromLink) {
+  closeModal();
+  if (!G || G.entry) return;
+  if (window.SD_STANDALONE && ROOM && !S.name) { askName(function () { startLive(mode, fromLink); }); return; }
+  if (!ROOM) {
+    modal(function (sh) { sh.appendChild(el("h2", { text: t("togetherT") })); sh.appendChild(el("p", { text: t("liveNeeds") })); sh.appendChild(el("h4", { text: t("tipsT") })); sh.appendChild(el("p", { text: t("tips") })); });
+    return;
+  }
+  if (LIVE) leaveLive();
+  var name = (mode === "coop" ? "coop-" : "race-") + G.pid;
+  ROOM.join(name).then(function (r) {
+    LIVE = { mode: mode, r: r, peers: [], myPeer: "", ready: false, phase: mode === "race" ? "lobby" : "play", known: {} };
+    LIVE.unsub = [r.onPeers(onPeers, function () { toast("Live: connection lost"); leaveLive(); })];
+    if (mode === "race") { paused = false; setCover("lobby"); }
+    publishPresence(); renderPeers(); renderBanner();
+    if (!fromLink) showInvite(mode);
+  }, function (e) { toast("Live: " + ((e && e.code) || "error")); });
+}
+function leaveLive() {
+  if (!LIVE) return;
+  var l = LIVE; LIVE = null;
+  try { l.unsub.forEach(function (u) { u(); }); } catch (e) {}
+  try { l.r.leave(); } catch (e) {}
+  if (coverMode === "lobby" || coverMode === "count" || coverMode === "racewait") setCover(null);
+  renderPeers(); renderBanner(); render();
+}
+function publishPresence() {
+  if (!LIVE || !G) return;
+  var p;
+  if (LIVE.mode === "coop") {
+    p = { mode: "coop", pid: G.pid, uid: MYID, sel: sel, v: G.vals.join(""), n: G.notes.map(function (x) { return x.toString(36).padStart(2, "0"); }).join(""), ts: G.ts.slice() };
+  } else {
+    var filled = 0, total = 0;
+    for (var i = 0; i < 81; i++) if (!G.giv[i]) { total++; if (G.vals[i] === G.sol[i]) filled++; }
+    p = { mode: "race", pid: G.pid, uid: MYID, ready: !!LIVE.ready, phase: LIVE.phase, filled: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : filled, total: total, doneMs: LIVE.phase === "done" ? Math.round(G.el) : null };
+  }
+  LIVE.r.presence(p).catch(function () {});
+}
+function onPeers(ch) {
+  if (!LIVE) return;
+  LIVE.peers = ch.peers.slice();
+  ch.peers.forEach(function (p) { if (p.sameTab) LIVE.myPeer = p.peer; });
+  var others = livePeers();
+  resolveNames(others.map(function (p) { return p.by || p.presence.uid; })).then(renderPeers);
+  ch.joined.forEach(function (p) { if (!p.sameTab && !LIVE.known[p.peer]) { LIVE.known[p.peer] = 1; } });
+  ch.left.forEach(function (p) { if (!p.sameTab && LIVE.known[p.peer]) { delete LIVE.known[p.peer]; toast(nameOf(p.by || (p.presence && p.presence.uid)) + " " + t("left")); } });
+  if (LIVE.mode === "coop") {
+    var changed = false;
+    others.forEach(function (p) { if (mergeCoop(p.presence, p.peer)) changed = true; });
+    if (changed) { HINT = null; renderHint(); save(); render(); publishPresence(); checkDone(); }
+    else render();
+  } else checkRaceStart();
+  renderPeers();
+}
+function mergeCoop(pr, peer) {
+  if (!pr || typeof pr.v !== "string" || pr.v.length !== 81 || !/^[0-9]+$/.test(pr.v) || typeof pr.n !== "string" || pr.n.length !== 162 || !Array.isArray(pr.ts) || pr.ts.length !== 81) return false;
+  var changed = false;
+  for (var i = 0; i < 81; i++) {
+    var pt = +pr.ts[i] || 0, mt = G.ts[i];
+    if (pt > G.clock) G.clock = pt;
+    if (G.giv[i]) continue;
+    if (pt > mt || (pt === mt && pt > 0 && peer > LIVE.myPeer)) {
+      var v = +pr.v[i], n = (parseInt(pr.n.substr(i * 2, 2), 36) || 0) & 511;
+      if (v !== G.vals[i] || n !== G.notes[i]) { G.vals[i] = v; G.notes[i] = n; changed = true; }
+      G.ts[i] = pt;
+    }
+  }
+  return changed;
+}
+function checkRaceStart() {
+  if (!LIVE || LIVE.mode !== "race") return;
+  var others = livePeers();
+  if (LIVE.phase === "lobby") {
+    var inProg = others.some(function (p) { return p.presence.phase === "play"; });
+    if (coverMode === "lobby" || !coverMode) setCover("lobby", { inProgress: inProg && !others.some(function (p) { return p.presence.phase === "lobby"; }) });
+    var lobby = others.filter(function (p) { return p.presence.phase === "lobby"; });
+    if (LIVE.ready && lobby.length >= 1 && lobby.every(function (p) { return p.presence.ready; })) startCountdown();
+  }
+}
+function startCountdown() {
+  LIVE.phase = "count"; publishPresence();
+  var n = 3;
+  var step = function () {
+    if (!LIVE || LIVE.phase !== "count") return;
+    if (n === 0) {
+      setCover(null);
+      var g = fresh(G.giv, G.sol, G.diff, G.label); g.chal = G.chal; G = g; HIST = []; HINT = null; renderHint();
+      $("#board").classList.remove("win");
+      LIVE.phase = "play"; publishPresence(); render(); toast(t("go")); return;
+    }
+    setCover("count", { n: n }); n--; setTimeout(step, 1000);
+  };
+  step();
+}
+function raceTable() {
+  var rows = [{ me: true, by: MYID, ms: LIVE.phase === "done" ? G.el : null, filled: null }];
+  livePeers().forEach(function (p) { rows.push({ by: p.by || p.presence.uid, ms: p.presence.doneMs, filled: p.presence.filled, total: p.presence.total }); });
+  rows.sort(function (a, b) { return (a.ms || 1e12) - (b.ms || 1e12); });
+  var tb = el("table");
+  rows.forEach(function (r, i) {
+    tb.appendChild(el("tr", null, [el("td", { text: (r.ms ? ["🥇", "🥈", "🥉"][i] || "" : "") + " " + (r.me ? t("you") : nameOf(r.by)) }),
+      el("td", { class: "n", text: r.ms ? fmt(r.ms) : (r.total ? Math.round(100 * r.filled / r.total) + "%" : "…") })]));
+  });
+  return tb;
+}
+function renderPeers() {
+  var box = $("#peers"); box.innerHTML = "";
+  if (!LIVE) { box.classList.add("hidden"); return; }
+  box.classList.remove("hidden");
+  box.appendChild(el("div", { class: "peer" }, [el("span", { class: "dot", style: "background:" + peerColor(LIVE.myPeer || "me") }), (LIVE.mode === "coop" ? t("liveCoop") : t("liveRace")) + " · " + t("you")]));
+  var others = livePeers();
+  if (!others.length) box.appendChild(el("div", { class: "peer" }, [el("span", { class: "spin", style: "width:12px;height:12px;border-width:2px" }), t("waiting")]));
+  others.forEach(function (p) {
+    var pr = p.presence, kids = [el("span", { class: "dot", style: "background:" + peerColor(p.peer) }), nameOf(p.by || pr.uid)];
+    if (LIVE.mode === "race") {
+      if (pr.doneMs) kids.push(" ✓ " + fmt(pr.doneMs));
+      else if (pr.phase === "lobby") kids.push(pr.ready ? " ✓" : " …");
+      else { var b = el("span", { class: "bar" }, [el("i", { style: "width:" + Math.round(100 * (pr.filled || 0) / (pr.total || 1)) + "%" })]); kids.push(b); }
+    } else if (typeof pr.sel === "number" && pr.sel >= 0) kids.push(el("span", { class: "legend", text: t("editing") + " " + HINTS.cn(pr.sel, L()) }));
+    box.appendChild(el("div", { class: "peer" }, kids));
+  });
+  box.appendChild(el("button", { class: "peer", text: "＋ " + t("inviteT"), onclick: function () { showInvite(LIVE.mode); } }));
+  box.appendChild(el("button", { class: "peer", text: "✕ " + t("leave"), onclick: leaveLive }));
+}
+
+function pushName() { if (USER && USER.setName && S.name) USER.setName(S.name).catch(function () {}); }
+whenCaps(pushName);
+function askName(then) {
+  modal(function (sh) {
+    var inp = el("input", { type: "text", maxlength: "16", placeholder: "Nick" });
+    sh.appendChild(el("h2", { text: t("yourName") }));
+    sh.appendChild(inp);
+    sh.appendChild(el("button", { class: "btn pri block", style: "margin-top:10px", text: t("ok"), onclick: function () {
+      var v = inp.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 16); if (!v) return;
+      S.name = v; saveS(); pushName(); closeModal(); then();
+    } }));
+    setTimeout(function () { inp.focus(); }, 50);
+  });
+}
+// leaderboard
+function saveTime(coop) {
+  if (!DB || !MYID || !G) return;
+  var ref; try { ref = DB.collection("times").doc(MYID); } catch (e) { return; }
+  var entry = { ms: Math.round(G.el), h: G.hints, m: G.mist, c: coop ? 1 : 0, lv: G.diff, at: Date.now() }, pid = G.pid;
+  ref.get().then(function (s) {
+    var d = s.exists ? JSON.parse(JSON.stringify(s.data())) : {};
+    d.r = d.r || {};
+    var prev = d.r[pid];
+    if (prev && prev.ms <= entry.ms) return;
+    d.r[pid] = entry;
+    return ref.set(d).then(function () { toast(t("saved")); });
+  }).catch(function () {});
+}
+function showLeaderboard() {
+  if (!G) return;
+  modal(function (sh) {
+    sh.appendChild(el("h2", { text: t("board") }));
+    sh.appendChild(el("p", { text: (G.label ? G.label + " · " : "") + diffName(G.diff) }));
+    var body = el("div", { text: t("loading") }); sh.appendChild(body);
+    var rows = [];
+    if (G.chal) rows.push({ name: G.chal.name || "🎯", ms: G.chal.ms, h: null });
+    var draw = function (note) {
+      body.innerHTML = "";
+      if (note) body.appendChild(el("p", { text: note }));
+      if (!rows.length) { body.appendChild(el("p", { text: t("leaderEmpty") })); return; }
+      rows.sort(function (a, b) { return a.ms - b.ms; });
+      var tb = el("table");
+      tb.appendChild(el("tr", null, [el("th", { text: "#" }), el("th"), el("th", { text: t("hintsUsed"), class: "n" }), el("th", { text: t("time"), class: "n" })]));
+      rows.forEach(function (r, i) {
+        tb.appendChild(el("tr", null, [el("td", { text: ["🥇", "🥈", "🥉"][i] || String(i + 1) }),
+          el("td", { text: (r.id ? (r.id === MYID ? t("you") : nameOf(r.id)) : r.name) + (r.c ? " (" + t("coopShort") + ")" : "") }),
+          el("td", { class: "n", text: r.h == null ? "–" : String(r.h) }), el("td", { class: "n", text: fmt(r.ms) })]));
+      });
+      body.appendChild(tb);
+    };
+    whenCaps(function () {
+      if (!DB) { draw(t("dbOff")); return; }
+      var done = false, timer = setTimeout(function () { if (!done) { done = true; draw(t("dbOff")); } }, 10000);
+      DB.collection("times").get().then(function (snap) {
+        snap.docs.forEach(function (d) {
+          var x = d.data(), r = x && x.r && x.r[G.pid];
+          if (r && typeof r.ms === "number") rows.push({ id: d.id, ms: r.ms, h: r.h, c: r.c });
+        });
+        return resolveNames(rows.map(function (r) { return r.id; }).filter(Boolean));
+      }).then(function () { if (!done) { done = true; clearTimeout(timer); draw(); } }, function () { if (!done) { done = true; clearTimeout(timer); draw(t("dbOff")); } });
+    });
+  });
+}
+
+// ---------------- banner ----------------
+function renderBanner() {
+  var b = $("#banner"); b.innerHTML = "";
+  if (G && !G.entry && G.chal && !G.done) {
+    b.classList.remove("hidden");
+    b.appendChild(el("span", { text: "⏱️ " + (G.chal.name ? t("beatItN", { n: G.chal.name, t: fmt(G.chal.ms) }) : t("beatIt", { t: fmt(G.chal.ms) })) }));
+    b.appendChild(el("button", { class: "x", text: "×", onclick: function () { b.classList.add("hidden"); } }));
+  } else b.classList.add("hidden");
+}
+
+// ---------------- language ----------------
+function applyLang() {
+  document.documentElement.lang = L();
+  document.querySelectorAll("[data-t]").forEach(function (e) { e.textContent = t(e.dataset.t); });
+  renderBanner(); renderPeers();
+}
+
+// ---------------- boot ----------------
+buildBoard();
+$("#tUndo").onclick = undo; $("#tErase").onclick = erase; $("#tNotes").onclick = toggleNotes; $("#tHint").onclick = hintPress;
+$("#bMenu").onclick = showMenu;
+$("#timerBtn").onclick = togglePause;
+$("#eStart").onclick = finishEntry; $("#eCancel").onclick = cancelEntry; $("#ePaste").onclick = pasteEntry;
+applyLang();
+if (!checkHash()) {
+  var cur = ls("sd.cur"), g = cur && loadSaved(cur);
+  if (g) { setGame(g); if (g.done) $("#board").classList.add("win"); }
+  else newDaily("medium");
+}
+window.__sd = { get G() { return G; }, get LIVE() { return LIVE; }, hintPress: hintPress, applyHint: applyHint, inputDigit: inputDigit, select: select, openCode: openCode, encode: encode, win: win };
+})();
+
+</script>
+</body>
+</html>

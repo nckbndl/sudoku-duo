@@ -1,0 +1,18 @@
+{
+  "rules": {
+    "rooms": {
+      "$room": {
+        ".read": true,
+        "$peer": { ".write": true, ".validate": "newData.child('by').isString()" }
+      }
+    },
+    "names": {
+      ".read": true,
+      "$uid": { ".write": true, ".validate": "newData.isString() && newData.val().length <= 30" }
+    },
+    "times": {
+      ".read": true,
+      "$uid": { ".write": true }
+    }
+  }
+}
