@@ -15,9 +15,16 @@
   --given:#23212b; --user:#2d58cf; --note:#6d6879; --accent:#d9603a; --accent-ink:#fff;
   --hl:#efe8db; --same:#fbdcbc; --sel:#ffd27a; --err:#d2393a; --err-bg:#fcdedb;
   --pat:#cfe0ff; --tgt:#ffd3c9; --colA:#bfe3c6; --colB:#cfd6ff; --ok:#2f8f5b;
-  --shadow:0 10px 30px rgba(40,30,20,.12); --r:14px;
+  --shadow:0 10px 30px rgba(40,30,20,.12); --r:14px; --nmark:var(--accent); --nmark-ink:#fff; --ns:1; --nts:1; --bfont:"Figtree",system-ui,sans-serif;
 }
-@media (prefers-color-scheme:dark){:root{
+:root[data-mode=dark]{
+  --bg:#15141a; --panel:#1f1e26; --ink:#efebe4; --muted:#a29dab; --line:#e6e1d8; --thin:#3b3945;
+  --given:#f3efe8; --user:#8fb1ff; --note:#a7a2b0; --accent:#f07a52; --accent-ink:#1a1210;
+  --hl:#2a2832; --same:#5a3d26; --sel:#7a5a14; --err:#ff7a70; --err-bg:#4a2422;
+  --pat:#24385e; --tgt:#5a2a22; --colA:#1f4a2c; --colB:#2b3170; --ok:#5fd18f;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme:dark){:root:not([data-mode=light]){
   --bg:#15141a; --panel:#1f1e26; --ink:#efebe4; --muted:#a29dab; --line:#e6e1d8; --thin:#3b3945;
   --given:#f3efe8; --user:#8fb1ff; --note:#a7a2b0; --accent:#f07a52; --accent-ink:#1a1210;
   --hl:#2a2832; --same:#5a3d26; --sel:#7a5a14; --err:#ff7a70; --err-bg:#4a2422;
@@ -47,7 +54,7 @@ header{display:flex;align-items:center;gap:10px}
 .bar i{display:block;height:100%;background:var(--accent)}
 .boardwrap{position:relative;align-self:center;width:min(100%, 72vh, 540px)}
 .board{display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;background:var(--panel);border:2.5px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);user-select:none;touch-action:manipulation}
-.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);font-size:clamp(18px,5.6vw,32px);font-weight:500;color:var(--user);cursor:pointer;transition:background .12s}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--thin);border-bottom:1px solid var(--thin);font-family:var(--bfont);font-size:calc(clamp(18px,5.6vw,32px) * var(--ns));font-weight:500;color:var(--user);cursor:pointer;transition:background .12s}
 .cell:nth-child(9n){border-right:0}
 .cell:nth-child(9n+3),.cell:nth-child(9n+6){border-right:2px solid var(--line)}
 .cell.r2,.cell.r5{border-bottom:2px solid var(--line)}
@@ -65,8 +72,8 @@ header{display:flex;align-items:center;gap:10px}
 .cell.cB{background:var(--colB)}
 .cell .ring{position:absolute;inset:1px;border:2.5px solid var(--pc);border-radius:4px;pointer-events:none}
 .notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
-.notes span{display:flex;align-items:center;justify-content:center;font-size:clamp(8px,2.3vw,13px);color:var(--note);font-weight:600;line-height:1;border-radius:3px}
-.notes span.nm{background:var(--accent);color:var(--accent-ink)}
+.notes span{display:flex;align-items:center;justify-content:center;font-size:calc(clamp(8px,2.3vw,13px) * var(--nts));color:var(--note);font-weight:600;line-height:1;border-radius:3px}
+.notes span.nm{background:var(--nmark);color:var(--nmark-ink)}
 .notes span.ne{color:var(--err);text-decoration:line-through;font-weight:800}
 .notes span.np{color:var(--ok);font-weight:800}
 .cover{position:absolute;inset:0;border-radius:10px;background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px;z-index:3}
@@ -136,6 +143,31 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 @keyframes pop{50%{transform:scale(1.12)}}
 .win .cell{animation:pop .5s ease both}
 .hidden{display:none!important}
+
+.num{font-family:var(--bfont)}
+.num.act{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset;background:color-mix(in srgb,var(--accent) 14%,var(--panel))}
+.num.gone{visibility:hidden}
+.pad.grid3{grid-template-columns:repeat(3,1fr);gap:8px}
+.pad.grid3 .num{aspect-ratio:auto;padding:10px 0;font-size:24px}
+.timer.notime #time{display:none}
+.seg{display:flex;background:var(--bg);border:1px solid var(--thin);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;padding:7px 6px;border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.setrow .seg{flex:0 0 auto;min-width:150px}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.theme{border:1px solid var(--thin);border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600;background:var(--bg)}
+.theme.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent) inset}
+.theme .sw{display:flex;gap:3px}
+.theme .sw i{width:12px;height:12px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.12)}
+.colrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--thin);font-size:15px}
+.colrow span{flex:1}
+.colrow input[type=color]{width:44px;height:32px;border:1px solid var(--thin);border-radius:8px;padding:2px;background:var(--bg)}
+.colrow .rs{font-size:12px;color:var(--accent);font-weight:700;padding:4px}
+.pv{display:grid;grid-template-columns:repeat(5,1fr);width:100%;max-width:300px;margin:6px auto 4px;border:2px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.pv .cell{aspect-ratio:1;font-size:calc(24px * var(--ns));border-right:1px solid var(--thin)!important;border-bottom:0!important}
+.pv .cell:last-child{border-right:0!important}
+.pv .notes span{font-size:calc(9px * var(--nts))}
+.sheet .sticky{position:sticky;top:-18px;background:var(--panel);z-index:2;padding:6px 0 4px;margin-top:-6px}
 
 </style>
 </head>
@@ -723,7 +755,16 @@ en: {
   cleared:"Notes filled in", saved:"Your time was saved", raceWait:"Finished! Waiting for the others…",
   mistakeShown:"Removed the wrong numbers.", leaderEmpty:"No times yet — be the first!", loading:"Loading…",
   dbOff:"The leaderboard needs the published page while you're signed in.", coopShort:"co-op",
-  joined:"joined", left:"left", liveCoop:"Live co-op", liveRace:"Live race", restartQ:"Clear all your entries?", sa_tips:"Just send the link — no account or app needed. It works in any browser; on iPhone use Share → Add to Home Screen for an app icon.", sa_liveNeeds:"Live play isn't connected yet.", sa_dbOff:"The shared times list isn't connected yet.", resumeT:"You've played this puzzle here before", resumeP:"The link has no progress in it — this is your own saved game on this device. Continue, or start with a clean grid?", cont:"Continue", startFresh:"Start fresh", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
+  joined:"joined", left:"left", liveCoop:"Live co-op", liveRace:"Live race", restartQ:"Clear all your entries?", sa_tips:"Just send the link — no account or app needed. It works in any browser; on iPhone use Share → Add to Home Screen for an app icon.", sa_liveNeeds:"Live play isn't connected yet.", sa_dbOff:"The shared times list isn't connected yet.", resumeT:"You've played this puzzle here before", resumeP:"The link has no progress in it — this is your own saved game on this device. Continue, or start with a clean grid?", cont:"Continue", startFresh:"Start fresh", settingsD:"Colors, highlighting, sizes, gameplay", sAppearance:"Appearance", sMode:"Mode", sLight:"Light", sDark:"Dark",
+  th_classic:"Classic", th_ocean:"Ocean", th_forest:"Forest", th_lavender:"Lavender", th_sunset:"Sunset", th_mono:"Mono", th_contrast:"Contrast", th_midnight:"Midnight",
+  sColors:"Your colors", sColorsP:"Tap a swatch to pick any color. It overrides the theme.", cAccent:"Accent (buttons)", cUser:"Your numbers", cGiven:"Given numbers",
+  cSel:"Selected cell", cHl:"Row / column / box", cSame:"Same numbers", cNmark:"Highlighted notes", cErr:"Mistakes", cBg:"Background", cBoard:"Board", cLine:"Thick lines", cThin:"Thin lines",
+  reset:"Reset", resetColors:"Reset all colors", sBoard:"Board & numbers", sNumSize:"Number size", sNoteSize:"Note size", sFont:"Number font", fRound:"Round", fSerif:"Serif",
+  sPad:"Number pad", sPadCounts:"Show how many are left", sHideDone:"Hide finished numbers", sTimer:"Show timer",
+  sHighlight:"Highlighting", sHlUnit:"Highlight row, column & box", sSame:"Highlight same numbers", sSameNotes:"Highlight same numbers in notes",
+  sGameplay:"Gameplay", sInput:"Input", iCell:"Cell first", iDigit:"Number first",
+  sInputP:"Number first: tap a number on the pad, then tap all the cells where it goes. Tap the number again to stop.",
+  sCelebrate:"Celebration animation", sGeneral:"General", resetAll:"Reset all settings", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
   easy:"Leicht", medium:"Mittel", hard:"Schwer", expert:"Experte", custom:"Eigenes Rätsel",
@@ -770,7 +811,16 @@ de: {
   cleared:"Notizen eingetragen", saved:"Deine Zeit wurde gespeichert", raceWait:"Fertig! Warte auf die anderen…",
   mistakeShown:"Falsche Zahlen entfernt.", leaderEmpty:"Noch keine Zeiten — sei die/der Erste!", loading:"Lädt…",
   dbOff:"Die Bestenliste braucht die veröffentlichte Seite und eine Anmeldung.", coopShort:"Koop",
-  joined:"ist da", left:"ist weg", liveCoop:"Live-Koop", liveRace:"Live-Rennen", restartQ:"Alle Einträge löschen?", sa_tips:"Schick einfach den Link — kein Konto, keine App nötig. Läuft in jedem Browser; auf dem iPhone über Teilen → Zum Home-Bildschirm als App-Symbol.", sa_liveNeeds:"Live-Spielen ist noch nicht verbunden.", sa_dbOff:"Die gemeinsame Zeitenliste ist noch nicht verbunden.", resumeT:"Dieses Rätsel hast du hier schon gespielt", resumeP:"Im Link ist kein Spielstand — das ist dein eigener gespeicherter Stand auf diesem Gerät. Weiterspielen oder mit leerem Gitter neu beginnen?", cont:"Weiterspielen", startFresh:"Neu beginnen", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
+  joined:"ist da", left:"ist weg", liveCoop:"Live-Koop", liveRace:"Live-Rennen", restartQ:"Alle Einträge löschen?", sa_tips:"Schick einfach den Link — kein Konto, keine App nötig. Läuft in jedem Browser; auf dem iPhone über Teilen → Zum Home-Bildschirm als App-Symbol.", sa_liveNeeds:"Live-Spielen ist noch nicht verbunden.", sa_dbOff:"Die gemeinsame Zeitenliste ist noch nicht verbunden.", resumeT:"Dieses Rätsel hast du hier schon gespielt", resumeP:"Im Link ist kein Spielstand — das ist dein eigener gespeicherter Stand auf diesem Gerät. Weiterspielen oder mit leerem Gitter neu beginnen?", cont:"Weiterspielen", startFresh:"Neu beginnen", settingsD:"Farben, Hervorhebung, Größen, Spielweise", sAppearance:"Aussehen", sMode:"Modus", sLight:"Hell", sDark:"Dunkel",
+  th_classic:"Klassisch", th_ocean:"Ozean", th_forest:"Wald", th_lavender:"Lavendel", th_sunset:"Sonnenuntergang", th_mono:"Mono", th_contrast:"Kontrast", th_midnight:"Mitternacht",
+  sColors:"Eigene Farben", sColorsP:"Tippe auf ein Farbfeld, um eine beliebige Farbe zu wählen. Sie ersetzt die Farbe des Themas.", cAccent:"Akzent (Buttons)", cUser:"Deine Zahlen", cGiven:"Vorgegebene Zahlen",
+  cSel:"Ausgewählte Zelle", cHl:"Zeile / Spalte / Block", cSame:"Gleiche Zahlen", cNmark:"Hervorgehobene Notizen", cErr:"Fehler", cBg:"Hintergrund", cBoard:"Spielfeld", cLine:"Dicke Linien", cThin:"Dünne Linien",
+  reset:"Zurücksetzen", resetColors:"Alle Farben zurücksetzen", sBoard:"Spielfeld & Zahlen", sNumSize:"Zahlengröße", sNoteSize:"Notizgröße", sFont:"Zahlenschrift", fRound:"Rund", fSerif:"Serif",
+  sPad:"Zahlenfeld", sPadCounts:"Anzeigen, wie viele noch fehlen", sHideDone:"Fertige Zahlen ausblenden", sTimer:"Timer anzeigen",
+  sHighlight:"Hervorhebung", sHlUnit:"Zeile, Spalte & Block hervorheben", sSame:"Gleiche Zahlen hervorheben", sSameNotes:"Gleiche Zahlen in Notizen hervorheben",
+  sGameplay:"Spielweise", sInput:"Eingabe", iCell:"Erst Zelle", iDigit:"Erst Zahl",
+  sInputP:"Erst Zahl: Tippe eine Zahl im Zahlenfeld an und dann alle Zellen, in die sie kommt. Zahl nochmal antippen zum Beenden.",
+  sCelebrate:"Jubel-Animation", sGeneral:"Allgemein", resetAll:"Alle Einstellungen zurücksetzen", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
 var BOXPOS = {
@@ -957,7 +1007,71 @@ function ls(k, v) {
 }
 
 // ---------------- settings & i18n ----------------
-var S = Object.assign({ lang: "auto", mist: "conf", autoNotes: true, same: true, name: "" }, ls("sd.settings") || {});
+var S_DEF = { lang: "auto", mist: "conf", autoNotes: true, same: true, sameNotes: true, hlUnit: true, name: "",
+  mode: "auto", theme: "classic", colors: {}, numSize: "m", noteSize: "m", font: "sans", showTimer: true,
+  padCounts: true, hideDone: false, inputMode: "cell", padLayout: "row", celebrate: true };
+var S = Object.assign({}, S_DEF, ls("sd.settings") || {});
+if (!S.colors || typeof S.colors !== "object") S.colors = {};
+
+// ---------------- look & feel ----------------
+var COLKEYS = [["accent", "--accent"], ["user", "--user"], ["given", "--given"], ["sel", "--sel"], ["hl", "--hl"], ["same", "--same"], ["nmark", "--nmark"], ["err", "--err"], ["bg", "--bg"], ["board", "--panel"], ["line", "--line"], ["thin", "--thin"]];
+var THEMES = {
+  classic: { light: {}, dark: {} },
+  ocean: { light: { accent: "#1f7a99", user: "#1559b3", sel: "#a9dcef", same: "#cfe9f5", hl: "#e6f0f3", nmark: "#1f7a99", bg: "#eef4f6", board: "#fbfeff" },
+    dark: { accent: "#4cc2e0", user: "#7cc4ff", sel: "#1d5568", same: "#173e4c", hl: "#1c2a30", nmark: "#2f8fae", bg: "#0f171b", board: "#162127" } },
+  forest: { light: { accent: "#3b7a3f", user: "#2c6e49", sel: "#cde8b5", same: "#e1f0d2", hl: "#eef2e6", nmark: "#3b7a3f", bg: "#f1f3ea", board: "#fcfdf8" },
+    dark: { accent: "#7cc97f", user: "#9be29a", sel: "#2f5a2c", same: "#24401f", hl: "#1f261d", nmark: "#4f9a52", bg: "#121610", board: "#1a2017" } },
+  lavender: { light: { accent: "#7a5cc7", user: "#5b3fb8", sel: "#e2d6ff", same: "#ece4ff", hl: "#f1edf8", nmark: "#7a5cc7", bg: "#f5f2fa", board: "#fefcff" },
+    dark: { accent: "#b39cff", user: "#c8b6ff", sel: "#46337a", same: "#33275a", hl: "#221d2e", nmark: "#7a5cc7", bg: "#141119", board: "#1d1925" } },
+  sunset: { light: { accent: "#e0497a", user: "#c2410c", sel: "#ffd0c2", same: "#ffe3d6", hl: "#fbeee6", nmark: "#e0497a", bg: "#fdf1ec", board: "#fffaf7" },
+    dark: { accent: "#ff7aa2", user: "#ffa36b", sel: "#6b2a3c", same: "#4d2230", hl: "#2a1c20", nmark: "#c23d68", bg: "#170f12", board: "#21161a" } },
+  mono: { light: { accent: "#333333", user: "#4a4a4a", given: "#000000", sel: "#d4d4d4", same: "#e4e4e4", hl: "#f0f0f0", nmark: "#555555", bg: "#f2f2f2", board: "#ffffff" },
+    dark: { accent: "#dddddd", user: "#c8c8c8", given: "#ffffff", sel: "#4a4a4a", same: "#383838", hl: "#262626", nmark: "#9a9a9a", bg: "#111111", board: "#1a1a1a" } },
+  contrast: { light: { accent: "#0040ff", user: "#0040ff", given: "#000000", sel: "#ffe000", same: "#9fe7ff", hl: "#e6e6e6", nmark: "#0040ff", err: "#d00000", bg: "#ffffff", board: "#ffffff", thin: "#8a8a8a", line: "#000000" },
+    dark: { accent: "#ffd400", user: "#7fd0ff", given: "#ffffff", sel: "#7a6400", same: "#004a66", hl: "#262626", nmark: "#ffd400", err: "#ff5050", bg: "#000000", board: "#0a0a0a", thin: "#6a6a6a", line: "#ffffff" } },
+  midnight: { light: { accent: "#2b4fd6", user: "#2b4fd6", sel: "#c9d4ff", same: "#dfe5ff", hl: "#eceff8", nmark: "#2b4fd6", bg: "#eef0f7", board: "#fbfcff" },
+    dark: { accent: "#8aa2ff", user: "#9fb4ff", sel: "#2a3670", same: "#1e2752", hl: "#171b2c", nmark: "#4d64c9", bg: "#0b0e19", board: "#121729" } }
+};
+function isDark() { return S.mode === "dark" || (S.mode === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches); }
+function inkFor(hex) {
+  var m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(hex || "").trim());
+  if (!m) return "#ffffff";
+  var y = (parseInt(m[1], 16) * 299 + parseInt(m[2], 16) * 587 + parseInt(m[3], 16) * 114) / 1000;
+  return y > 150 ? "#1a1a1a" : "#ffffff";
+}
+function toHex(c) {
+  c = String(c || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(c)) return c;
+  var m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+  if (m) return "#" + [m[1], m[2], m[3]].map(function (x) { return (+x).toString(16).padStart(2, "0"); }).join("");
+  if (/^#[0-9a-f]{3}$/i.test(c)) return "#" + c.slice(1).split("").map(function (x) { return x + x; }).join("");
+  return "#888888";
+}
+function applyLook() {
+  var root = document.documentElement, th = THEMES[S.theme] || THEMES.classic, set = th[isDark() ? "dark" : "light"];
+  root.setAttribute("data-mode", S.mode);
+  COLKEYS.forEach(function (k) {
+    var v = S.colors[k[0]] || set[k[0]];
+    if (v) root.style.setProperty(k[1], v); else root.style.removeProperty(k[1]);
+  });
+  var cs = getComputedStyle(root);
+  root.style.setProperty("--accent-ink", inkFor(toHex(cs.getPropertyValue("--accent"))));
+  var nm = cs.getPropertyValue("--nmark").trim();
+  root.style.setProperty("--nmark-ink", inkFor(toHex(nm.indexOf("var(") === 0 ? cs.getPropertyValue("--accent") : nm)));
+  root.style.setProperty("--ns", { s: 0.8, m: 1, l: 1.18 }[S.numSize] || 1);
+  root.style.setProperty("--nts", { s: 0.85, m: 1, l: 1.25 }[S.noteSize] || 1);
+  root.style.setProperty("--bfont", { sans: '"Figtree",system-ui,sans-serif', serif: '"Fraunces",Georgia,serif', mono: 'ui-monospace,"SF Mono",Menlo,monospace', round: 'ui-rounded,"SF Pro Rounded","Nunito",system-ui,sans-serif' }[S.font] || "");
+  var pad = document.getElementById("pad"); if (pad) pad.classList.toggle("grid3", S.padLayout === "grid");
+  var tb = document.getElementById("timerBtn"); if (tb) tb.classList.toggle("notime", !S.showTimer);
+}
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () { applyLook(); }); } catch (e) {}
+function effColor(key) {
+  var k = COLKEYS.filter(function (x) { return x[0] === key; })[0];
+  var v = getComputedStyle(document.documentElement).getPropertyValue(k[1]).trim();
+  if (v.indexOf("var(") === 0) v = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim();
+  return toHex(v);
+}
+var activeD = 0;
 function L() { return S.lang === "auto" ? ((navigator.language || "en").toLowerCase().indexOf("de") === 0 ? "de" : "en") : S.lang; }
 function t(k, v) {
   var s = (window.SD_STANDALONE && STR[L()]["sa_" + k]) || (STR[L()][k] || STR.en[k] || k);
@@ -1011,12 +1125,12 @@ function buildBoard() {
     var v = el("span", { class: "v" }), n = el("div", { class: "notes" });
     for (var d = 1; d <= 9; d++) n.appendChild(el("span"));
     c.appendChild(v); c.appendChild(n);
-    c.addEventListener("pointerdown", (function (ii) { return function (e) { e.preventDefault(); select(ii); }; })(i));
+    c.addEventListener("pointerdown", (function (ii) { return function (e) { e.preventDefault(); cellTap(ii); }; })(i));
     b.appendChild(c); cells.push(c);
   }
   var pad = $("#pad");
   for (d = 1; d <= 9; d++) {
-    pad.appendChild(el("button", { class: "num", "data-d": d, onclick: (function (dd) { return function () { inputDigit(dd); }; })(d) }, [String(d), el("small")]));
+    pad.appendChild(el("button", { class: "num", "data-d": d, onclick: (function (dd) { return function () { padTap(dd); }; })(d) }, [String(d), el("small")]));
   }
 }
 function curVal(i) { return G.giv[i] || G.vals[i]; }
@@ -1027,7 +1141,7 @@ function conflictAt(i) {
 }
 function render() {
   if (!G) return;
-  var E = G.entry, hv = HINT ? HINT.view : null, selV = sel >= 0 ? curVal(sel) : 0;
+  var E = G.entry, hv = HINT ? HINT.view : null, selV = (S.inputMode === "digit" && activeD) ? activeD : (sel >= 0 ? curVal(sel) : 0);
   var unitSet = {};
   if (hv) hv.units.forEach(function (u) { SE.UNITS[u].forEach(function (x) { unitSet[x] = 1; }); });
   var mk = function (arr) { var o = {}; (arr || []).forEach(function (x) { o[x] = 1; }); return o; };
@@ -1048,10 +1162,10 @@ function render() {
     if (hv) {
       if (cA[i]) cls += " cA"; else if (cB[i]) cls += " cB"; else if (tgt[i]) cls += " tgt"; else if (pat[i]) cls += " pat"; else if (unitSet[i]) cls += " hl";
       if (i === sel) cls += " sel";
-    } else if (sel >= 0) {
+    } else {
       if (i === sel) cls += " sel";
       else if (S.same && selV && v === selV) cls += " same";
-      else if (SE.ROW[i] === SE.ROW[sel] || SE.COL[i] === SE.COL[sel] || SE.BOX[i] === SE.BOX[sel]) cls += " hl";
+      else if (S.hlUnit && sel >= 0 && (SE.ROW[i] === SE.ROW[sel] || SE.COL[i] === SE.COL[sel] || SE.BOX[i] === SE.BOX[sel])) cls += " hl";
     }
     if (!E && v && !G.giv[i]) {
       if (S.mist === "sol" && v !== G.sol[i]) cls += " err";
@@ -1065,7 +1179,7 @@ function render() {
       var on = nm & SE.bit(d), s = ns[d - 1];
       var t2 = on ? d : (noteMark[i * 10 + d] === "np" ? d : "");
       if (s.textContent != t2) s.textContent = t2;
-      var nc = (on || t2) && noteMark[i * 10 + d] ? noteMark[i * 10 + d] : (on && S.same && selV === d && !hv ? "nm" : "");
+      var nc = (on || t2) && noteMark[i * 10 + d] ? noteMark[i * 10 + d] : (on && S.sameNotes && selV === d && !hv ? "nm" : "");
       if (s.className !== nc) s.className = nc;
     }
     var ring = c.querySelector(".ring");
@@ -1076,8 +1190,10 @@ function render() {
   for (i = 0; i < 81; i++) cnt[curVal(i)]++;
   document.querySelectorAll(".num").forEach(function (b) {
     var d = +b.dataset.d, left = 9 - cnt[d];
-    b.classList.toggle("full", left <= 0 && !E);
-    b.lastChild.textContent = E ? "" : (left > 0 ? left : "");
+    b.classList.toggle("full", left <= 0 && !E && !S.hideDone);
+    b.classList.toggle("gone", left <= 0 && !E && S.hideDone);
+    b.classList.toggle("act", S.inputMode === "digit" && activeD === d);
+    b.lastChild.textContent = E || !S.padCounts ? "" : (left > 0 ? left : "");
   });
   $(".app").classList.toggle("notesmode", notesMode);
   $("#tNotes").classList.toggle("on", notesMode);
@@ -1090,6 +1206,16 @@ function render() {
 }
 
 // ---------------- input ----------------
+function cellTap(i) {
+  if (S.inputMode === "digit" && G && activeD && !blocked()) {
+    if (G.entry || !G.giv[i]) { sel = i; inputDigit(activeD); if (LIVE && LIVE.mode === "coop") publishPresence(); render(); return; }
+  }
+  select(i);
+}
+function padTap(d) {
+  if (S.inputMode === "digit") { activeD = activeD === d ? 0 : d; render(); return; }
+  inputDigit(d);
+}
 function select(i) {
   if (!G) return;
   sel = i;
@@ -1491,7 +1617,7 @@ function showMenu() {
       item("＋", t("nNew"), t("newGame"), showNew),
       item("↗", t("nShare"), t("shareT"), showShare),
       item("👥", t("nTogether"), t("togetherT"), showTogether),
-      item("⚙", t("settings"), t("fillNotes") + " · " + t("stats"), showMore)]));
+      item("⚙", t("settings"), t("settingsD"), showMore)]));
   });
 }
 function showShare() {
@@ -1537,17 +1663,48 @@ function showInvite(mode) {
     sh.appendChild(el("p", { text: t("tips") }));
   });
 }
-function toggleRow(label, key) {
+function toggleRow(label, key, after) {
   var sw = el("div", { class: "switch" + (S[key] ? " on" : "") });
-  return el("div", { class: "setrow", onclick: function () { S[key] = !S[key]; saveS(); sw.className = "switch" + (S[key] ? " on" : ""); render(); } }, [el("span", { text: label }), sw]);
+  return el("div", { class: "setrow", onclick: function () { S[key] = !S[key]; saveS(); sw.className = "switch" + (S[key] ? " on" : ""); applyLook(); render(); if (after) after(); } }, [el("span", { text: label }), sw]);
 }
 function selectRow(label, key, opts) {
   var s = el("select", { onchange: function () { S[key] = s.value; saveS(); applyLang(); render(); renderHint(); if (key === "lang") showMore(); } });
   opts.forEach(function (o) { var op = el("option", { value: o[0], text: o[1] }); if (S[key] === o[0]) op.selected = true; s.appendChild(op); });
   return el("div", { class: "setrow" }, [el("span", { text: label }), s]);
 }
-function showMore() {
+function seg(opts, key, after) {
+  var box = el("div", { class: "seg" });
+  opts.forEach(function (o) {
+    box.appendChild(el("button", { class: S[key] === o[0] ? "on" : "", text: o[1], onclick: function () {
+      S[key] = o[0]; saveS(); applyLook(); render(); renderHint();
+      Array.prototype.forEach.call(box.children, function (b, i) { b.className = opts[i][0] === S[key] ? "on" : ""; });
+      if (after) after();
+    } }));
+  });
+  return box;
+}
+function segRow(label, key, opts, after) { return el("div", { class: "setrow" }, [el("span", { text: label }), seg(opts, key, after)]); }
+function previewBoard() {
+  var pv = el("div", { class: "pv" });
+  var mkCell = function (cls, v, notes) {
+    var c = el("div", { class: "cell " + cls });
+    c.appendChild(el("span", { class: "v", text: v || "" }));
+    var n = el("div", { class: "notes" });
+    for (var d = 1; d <= 9; d++) n.appendChild(el("span", { text: notes && notes.indexOf(d) >= 0 ? String(d) : "", class: notes && notes.indexOf(d) >= 0 && d === 3 && S.sameNotes ? "nm" : "" }));
+    c.appendChild(n);
+    return c;
+  };
+  pv.appendChild(mkCell("given" + (S.hlUnit ? " hl" : ""), "5"));
+  pv.appendChild(mkCell("sel", "3"));
+  pv.appendChild(mkCell(S.hlUnit ? "hl" : "", "", [1, 3, 8]));
+  pv.appendChild(mkCell(S.same ? "same" : "", "3"));
+  pv.appendChild(mkCell("err", "7"));
+  return pv;
+}
+function showMore(scrollTo) {
   modal(function (sh) {
+    var refresh = function () { var st = sh.scrollTop; showMore(st); };
+    var H = function (k) { sh.appendChild(el("h4", { text: t(k) })); };
     sh.appendChild(el("h2", { text: t("settings") }));
     sh.appendChild(el("div", { class: "grid2", style: "margin:8px 0" }, [
       el("button", { class: "btn", text: t("fillNotes"), onclick: function () { closeModal(); fillNotes(); } }),
@@ -1561,16 +1718,66 @@ function showMore() {
             el("button", { class: "btn", text: t("cancel"), onclick: closeModal })]));
         });
       } })]));
-    sh.appendChild(selectRow(t("language"), "lang", [["auto", t("auto")], ["en", "English"], ["de", "Deutsch"]]));
+
+    // --- appearance
+    H("sAppearance");
+    sh.appendChild(el("div", { class: "sticky" }, [previewBoard()]));
+    sh.appendChild(segRow(t("sMode"), "mode", [["auto", t("auto")], ["light", t("sLight")], ["dark", t("sDark")]], refresh));
+    var tg = el("div", { class: "themes", style: "margin:10px 0" });
+    Object.keys(THEMES).forEach(function (k) {
+      var set = THEMES[k][isDark() ? "dark" : "light"], sw = el("div", { class: "sw" });
+      [set.accent || "#d9603a", set.sel || (isDark() ? "#7a5a14" : "#ffd27a"), set.user || (isDark() ? "#8fb1ff" : "#2d58cf")].forEach(function (c) { sw.appendChild(el("i", { style: "background:" + c })); });
+      tg.appendChild(el("button", { class: "theme" + (S.theme === k ? " sel" : ""), onclick: function () { S.theme = k; S.colors = {}; saveS(); applyLook(); render(); refresh(); } }, [sw, t("th_" + k)]));
+    });
+    sh.appendChild(tg);
+    H("sColors");
+    sh.appendChild(el("p", { text: t("sColorsP") }));
+    [["accent", "cAccent"], ["user", "cUser"], ["given", "cGiven"], ["sel", "cSel"], ["hl", "cHl"], ["same", "cSame"], ["nmark", "cNmark"], ["err", "cErr"], ["bg", "cBg"], ["board", "cBoard"], ["line", "cLine"], ["thin", "cThin"]].forEach(function (r) {
+      var inp = el("input", { type: "color", value: effColor(r[0]) });
+      inp.addEventListener("input", function () { S.colors[r[0]] = inp.value; applyLook(); render(); });
+      inp.addEventListener("change", function () { S.colors[r[0]] = inp.value; saveS(); refresh(); });
+      var kids = [el("span", { text: t(r[1]) })];
+      if (S.colors[r[0]]) kids.push(el("button", { class: "rs", text: t("reset"), onclick: function () { delete S.colors[r[0]]; saveS(); applyLook(); render(); refresh(); } }));
+      kids.push(inp);
+      sh.appendChild(el("div", { class: "colrow" }, kids));
+    });
+    if (Object.keys(S.colors).length) sh.appendChild(el("button", { class: "btn block", style: "margin-top:8px", text: t("resetColors"), onclick: function () { S.colors = {}; saveS(); applyLook(); render(); refresh(); } }));
+
+    H("sBoard");
+    sh.appendChild(segRow(t("sNumSize"), "numSize", [["s", "S"], ["m", "M"], ["l", "L"]], refresh));
+    sh.appendChild(segRow(t("sNoteSize"), "noteSize", [["s", "S"], ["m", "M"], ["l", "L"]], refresh));
+    sh.appendChild(segRow(t("sFont"), "font", [["sans", "Aa"], ["round", t("fRound")], ["serif", t("fSerif")], ["mono", "Mono"]], refresh));
+    sh.appendChild(segRow(t("sPad"), "padLayout", [["row", "1–9"], ["grid", "3×3"]]));
+    sh.appendChild(toggleRow(t("sPadCounts"), "padCounts"));
+    sh.appendChild(toggleRow(t("sHideDone"), "hideDone"));
+    sh.appendChild(toggleRow(t("sTimer"), "showTimer"));
+
+    // --- highlighting
+    H("sHighlight");
+    sh.appendChild(toggleRow(t("sHlUnit"), "hlUnit", refresh));
+    sh.appendChild(toggleRow(t("sSame"), "same", refresh));
+    sh.appendChild(toggleRow(t("sSameNotes"), "sameNotes", refresh));
     sh.appendChild(selectRow(t("mistakesMode"), "mist", [["off", t("mOff")], ["conf", t("mConf")], ["sol", t("mSol")]]));
+
+    // --- gameplay
+    H("sGameplay");
+    sh.appendChild(segRow(t("sInput"), "inputMode", [["cell", t("iCell")], ["digit", t("iDigit")]], function () { activeD = 0; render(); }));
+    sh.appendChild(el("p", { class: "legend", text: t("sInputP") }));
     sh.appendChild(toggleRow(t("autoNotes"), "autoNotes"));
-    sh.appendChild(toggleRow(t("sameHl"), "same"));
+    sh.appendChild(toggleRow(t("sCelebrate"), "celebrate"));
+
+    H("sGeneral");
+    sh.appendChild(selectRow(t("language"), "lang", [["auto", t("auto")], ["en", "English"], ["de", "Deutsch"]]));
     var nm = el("input", { type: "text", maxlength: "16", value: S.name || "", placeholder: "Nick", oninput: function () { S.name = nm.value.replace(/[^A-Za-z0-9]/g, ""); saveS(); }, onchange: pushName });
     sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("yourName") })]));
     sh.appendChild(nm);
+    sh.appendChild(el("button", { class: "btn block", style: "margin-top:14px", text: t("resetAll"), onclick: function () {
+      var keep = { lang: S.lang, name: S.name }; S = Object.assign({}, S_DEF, keep, { colors: {} }); saveS(); applyLook(); activeD = 0; render(); refresh();
+    } }));
     sh.appendChild(el("h4", { text: t("tipsT") }));
     sh.appendChild(el("p", { text: t("tips") }));
     sh.appendChild(el("p", { class: "legend", text: "Keyboard: 1–9 · Shift+1–9 = note · N = notes · H = hint · arrows · Backspace · Ctrl+Z" }));
+    if (scrollTo) setTimeout(function () { sh.scrollTop = scrollTo; }, 0);
   });
 }
 function showStats() {
@@ -1628,7 +1835,7 @@ function pasteEntry() {
 // ---------------- win ----------------
 function win() {
   G.done = true; HINT = null; renderHint();
-  $("#board").classList.add("win");
+  if (S.celebrate) $("#board").classList.add("win");
   var coop = LIVE && LIVE.mode === "coop" && livePeers().length > 0;
   var res = ls("sd.results") || [];
   if (!res.some(function (r) { return r.pid === G.pid && r.ms === G.el; })) {
@@ -1907,6 +2114,7 @@ function applyLang() {
 
 // ---------------- boot ----------------
 buildBoard();
+applyLook();
 $("#tUndo").onclick = undo; $("#tErase").onclick = erase; $("#tNotes").onclick = toggleNotes; $("#tHint").onclick = hintPress;
 $("#bMenu").onclick = showMenu;
 $("#timerBtn").onclick = togglePause;
