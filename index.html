@@ -168,6 +168,9 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 .pv .cell:last-child{border-right:0!important}
 .pv .notes span{font-size:calc(9px * var(--nts))}
 .sheet .sticky{position:sticky;top:-18px;background:var(--panel);z-index:2;padding:6px 0 4px;margin-top:-6px}
+.status{display:flex;justify-content:center;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--muted);margin:-4px 0 -4px}
+.status .x{color:var(--thin);font-size:13px}
+.status .x.on{color:var(--err)}
 
 </style>
 </head>
@@ -191,6 +194,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
     <button class="btn" id="eCancel" data-t="cancel"></button>
     <button class="btn pri" id="eStart" data-t="start"></button>
   </div>
+  <div class="status hidden" id="status"></div>
   <div class="boardwrap">
     <div class="board" id="board"></div>
     <div class="cover hidden" id="cover"></div>
@@ -765,7 +769,7 @@ en: {
   sHighlight:"Highlighting", sHlUnit:"Highlight row, column & box", sSame:"Highlight same numbers", sSameNotes:"Highlight same numbers in notes",
   sGameplay:"Gameplay", sInput:"Input", iCell:"Cell first", iDigit:"Number first",
   sInputP:"Number first: tap a number on the pad, then tap all the cells where it goes. Tap the number again to stop.",
-  sCelebrate:"Celebration animation", sGeneral:"General", resetAll:"Reset all settings", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
+  sCelebrate:"Celebration animation", sGeneral:"General", resetAll:"Reset all settings", mistakeN:"Mistake {n} of {m}", overT:"Game over", overP:"That was mistake number {n}.", overCont:"Keep playing (one more chance)", outShort:"out", sMistLimit:"Mistake limit", sMistLimitP:"The game ends after this many wrong numbers. Wrong numbers are shown in red while a limit is on.", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
   easy:"Leicht", medium:"Mittel", hard:"Schwer", expert:"Experte", custom:"Eigenes Rätsel",
@@ -821,7 +825,7 @@ de: {
   sHighlight:"Hervorhebung", sHlUnit:"Zeile, Spalte & Block hervorheben", sSame:"Gleiche Zahlen hervorheben", sSameNotes:"Gleiche Zahlen in Notizen hervorheben",
   sGameplay:"Spielweise", sInput:"Eingabe", iCell:"Erst Zelle", iDigit:"Erst Zahl",
   sInputP:"Erst Zahl: Tippe eine Zahl im Zahlenfeld an und dann alle Zellen, in die sie kommt. Zahl nochmal antippen zum Beenden.",
-  sCelebrate:"Jubel-Animation", sGeneral:"Allgemein", resetAll:"Alle Einstellungen zurücksetzen", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
+  sCelebrate:"Jubel-Animation", sGeneral:"Allgemein", resetAll:"Alle Einstellungen zurücksetzen", mistakeN:"Fehler {n} von {m}", overT:"Spiel vorbei", overP:"Das war Fehler Nummer {n}.", overCont:"Weiterspielen (noch eine Chance)", outShort:"raus", sMistLimit:"Fehlerlimit", sMistLimitP:"Das Spiel endet nach so vielen falschen Zahlen. Solange ein Limit aktiv ist, werden falsche Zahlen rot angezeigt.", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
 var BOXPOS = {
@@ -1010,7 +1014,7 @@ function ls(k, v) {
 // ---------------- settings & i18n ----------------
 var S_DEF = { lang: "auto", mist: "conf", autoNotes: true, same: true, sameNotes: true, hlUnit: true, name: "",
   mode: "auto", theme: "classic", colors: {}, numSize: "m", noteSize: "m", font: "sans", showTimer: true,
-  padCounts: true, hideDone: false, inputMode: "cell", padLayout: "row", celebrate: true };
+  padCounts: true, hideDone: false, inputMode: "cell", padLayout: "row", celebrate: true, mistLimit: 3 };
 var S = Object.assign({}, S_DEF, ls("sd.settings") || {});
 if (!S.colors || typeof S.colors !== "object") S.colors = {};
 
@@ -1099,20 +1103,21 @@ function fresh(giv, sol, diff, label) {
     el: 0, done: false, hints: 0, mist: 0, elims: [], chal: null, fullWarned: false };
 }
 var saveT = null;
-function save() {
+function save(now) {
   clearTimeout(saveT);
-  saveT = setTimeout(function () {
+  var doSave = function () {
     if (!G) return;
     var games = ls("sd.games") || {};
     games[G.pid] = Object.assign({}, G, { at: Date.now() });
     var keys = Object.keys(games).sort(function (a, b) { return (games[b].at || 0) - (games[a].at || 0); });
     keys.slice(25).forEach(function (k) { delete games[k]; });
     ls("sd.games", games); ls("sd.cur", G.pid);
-  }, 300);
+  };
+  if (now) doSave(); else saveT = setTimeout(doSave, 300);
 }
 function loadSaved(pid) { var g = (ls("sd.games") || {})[pid]; return g && g.giv ? g : null; }
 function setGame(g) {
-  G = g; HIST = []; HINT = null; sel = -1; paused = false; setCover(null);
+  G = g; HIST = []; HINT = null; sel = -1; paused = false; setCover(G.over ? "over" : null);
   $("#board").classList.remove("win");
   render(); renderHint(); renderBanner(); save();
 }
@@ -1142,6 +1147,7 @@ function conflictAt(i) {
 }
 function render() {
   if (!G) return;
+  renderStatus();
   var E = G.entry, hv = HINT ? HINT.view : null, selV = (S.inputMode === "digit" && activeD) ? activeD : (sel >= 0 ? curVal(sel) : 0);
   var unitSet = {};
   if (hv) hv.units.forEach(function (u) { SE.UNITS[u].forEach(function (x) { unitSet[x] = 1; }); });
@@ -1169,7 +1175,7 @@ function render() {
       else if (S.hlUnit && sel >= 0 && (SE.ROW[i] === SE.ROW[sel] || SE.COL[i] === SE.COL[sel] || SE.BOX[i] === SE.BOX[sel])) cls += " hl";
     }
     if (!E && v && !G.giv[i]) {
-      if (S.mist === "sol" && v !== G.sol[i]) cls += " err";
+      if ((S.mist === "sol" || S.mistLimit) && v !== G.sol[i]) cls += " err";
       else if (S.mist !== "off" && conflictAt(i)) cls += " err";
     }
     if (E && v && conflictAt(i)) cls += " err errbg";
@@ -1223,7 +1229,22 @@ function select(i) {
   if (LIVE && LIVE.mode === "coop") publishPresence();
   render();
 }
-function blocked() { return !G || coverMode || paused; }
+function blocked() { return !G || coverMode || paused || (G && G.over); }
+function mistLimit() { return S.mistLimit ? S.mistLimit + (G && G.extra || 0) : 0; }
+function renderStatus() {
+  var s = $("#status"); if (!s) return;
+  if (!G || G.entry || !S.mistLimit) { s.classList.add("hidden"); return; }
+  s.classList.remove("hidden");
+  var lim = mistLimit(), m = G.mist || 0;
+  s.innerHTML = "";
+  s.appendChild(el("span", { text: t("mistakes") + ": " }));
+  for (var k = 0; k < lim; k++) s.appendChild(el("b", { class: k < m ? "x on" : "x", text: "✕" }));
+}
+function gameOver() {
+  G.over = true; HINT = null; renderHint(); save(true); render();
+  if (LIVE && LIVE.mode === "race") publishPresence();
+  setCover("over");
+}
 function inputDigit(d, forceNote) {
   if (blocked() || sel < 0) return;
   if (G.entry) {
@@ -1241,8 +1262,13 @@ function setValue(i, d, extra) {
   if (d && S.autoNotes) SE.PEERS[i].forEach(function (p) {
     if (!G.giv[p] && !G.vals[p] && (G.notes[p] & SE.bit(d))) ch.push(chg(p, 0, G.notes[p] & ~SE.bit(d)));
   });
-  if (d && d !== G.sol[i]) G.mist++;
+  var wrong = d && d !== G.sol[i];
+  if (wrong) G.mist++;
   commit(ch.concat(extra || []));
+  if (wrong && mistLimit()) {
+    if (G.mist >= mistLimit()) gameOver();
+    else toast(t("mistakeN", { n: G.mist, m: mistLimit() }));
+  }
 }
 function commit(ch, keepHint) {
   if (!ch.length) return;
@@ -1355,6 +1381,17 @@ function setCover(mode, opts) {
     c.appendChild(el("button", { class: "btn", text: t("leave"), onclick: leaveLive }));
   } else if (mode === "count") {
     c.appendChild(el("div", { class: "count", text: String(opts.n) }));
+  } else if (mode === "over") {
+    c.appendChild(el("div", { class: "count", text: "✕" }));
+    c.appendChild(el("h2", { text: t("overT") }));
+    c.appendChild(el("p", { text: t("overP", { n: G.mist }) }));
+    if (!(LIVE && LIVE.mode === "race")) {
+      c.appendChild(el("button", { class: "btn pri", text: t("overCont"), onclick: function () { G.over = false; G.extra = (G.extra || 0) + 1; setCover(null); save(true); render(); } }));
+      c.appendChild(el("button", { class: "btn", text: t("restart"), onclick: function () {
+        var f = fresh(G.giv, G.sol, G.diff, G.label); f.chal = G.chal; setGame(f);
+      } }));
+    }
+    c.appendChild(el("button", { class: "btn", text: t("newPuzzle"), onclick: showNew }));
   } else if (mode === "racewait") {
     c.appendChild(el("h2", { text: fmt(G.el) }));
     c.appendChild(el("p", { text: t("raceWait") }));
@@ -1556,6 +1593,7 @@ function checkHash() {
   return false;
 }
 window.addEventListener("hashchange", checkHash);
+window.addEventListener("pagehide", function () { if (G && !G.entry) save(true); });
 function copyText(txt, ta) {
   var ok = function () { toast(t("copied")); };
   var bad = function () { if (ta) { ta.focus(); ta.select(); } try { if (document.execCommand("copy")) return ok(); } catch (e) {} toast(t("copyFail")); };
@@ -1764,6 +1802,16 @@ function showMore(scrollTo) {
     H("sGameplay");
     sh.appendChild(segRow(t("sInput"), "inputMode", [["cell", t("iCell")], ["digit", t("iDigit")]], function () { activeD = 0; render(); }));
     sh.appendChild(el("p", { class: "legend", text: t("sInputP") }));
+    var ml = el("div", { class: "seg" });
+    [[0, t("mOff")], [1, "1"], [2, "2"], [3, "3"], [5, "5"]].forEach(function (o) {
+      ml.appendChild(el("button", { class: S.mistLimit === o[0] ? "on" : "", text: o[1], onclick: function () {
+        S.mistLimit = o[0]; saveS(); render();
+        Array.prototype.forEach.call(ml.children, function (b) { b.className = b.textContent === o[1] ? "on" : ""; });
+        if (G && G.over && (!S.mistLimit || G.mist < mistLimit())) { G.over = false; setCover(null); save(); render(); }
+      } }));
+    });
+    sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("sMistLimit") }), ml]));
+    sh.appendChild(el("p", { class: "legend", text: t("sMistLimitP") }));
     sh.appendChild(toggleRow(t("autoNotes"), "autoNotes"));
     sh.appendChild(toggleRow(t("sCelebrate"), "celebrate"));
 
@@ -1939,7 +1987,7 @@ function publishPresence() {
   } else {
     var filled = 0, total = 0;
     for (var i = 0; i < 81; i++) if (!G.giv[i]) { total++; if (G.vals[i] === G.sol[i]) filled++; }
-    p = { mode: "race", pid: G.pid, uid: MYID, ready: !!LIVE.ready, phase: LIVE.phase, filled: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : filled, total: total, doneMs: LIVE.phase === "done" ? Math.round(G.el) : null, hints: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : (G.hints || 0) };
+    p = { mode: "race", pid: G.pid, uid: MYID, ready: !!LIVE.ready, phase: LIVE.phase, filled: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : filled, total: total, doneMs: LIVE.phase === "done" ? Math.round(G.el) : null, hints: LIVE.phase === "lobby" || LIVE.phase === "count" ? 0 : (G.hints || 0), out: !!G.over };
   }
   LIVE.r.presence(p).catch(function () {});
 }
@@ -2021,6 +2069,7 @@ function renderPeers() {
   others.forEach(function (p) {
     var pr = p.presence, kids = [el("span", { class: "dot", style: "background:" + peerColor(p.peer) }), nameOf(p.by || pr.uid)];
     if (LIVE.mode === "race") {
+      if (pr.out) kids.push(el("span", { class: "legend", text: " ✕ " + t("outShort") }));
       if (pr.phase !== "lobby" && pr.hints) kids.push(el("span", { class: "legend", text: "💡" + pr.hints }));
       if (pr.doneMs) kids.push(" ✓ " + fmt(pr.doneMs));
       else if (pr.phase === "lobby") kids.push(pr.ready ? " ✓" : " …");
