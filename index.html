@@ -168,23 +168,35 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 .pv .cell:last-child{border-right:0!important}
 .pv .notes span{font-size:calc(9px * var(--nts))}
 .sheet .sticky{position:sticky;top:-18px;background:var(--panel);z-index:2;padding:6px 0 4px;margin-top:-6px}
-.status{display:flex;justify-content:center;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--muted);margin:-4px 0 -4px}
-.status .x{color:var(--thin);font-size:13px}
-.status .x.on{color:var(--err)}
+.inforow{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--muted);padding:0 4px;margin:-2px 0 -4px}
+#status{font-variant-numeric:tabular-nums;padding:2px 9px;border-radius:99px;transition:.2s}
+#status.warn1{color:var(--err)}
+#status.warn2{color:#fff;background:var(--err)}
+.menub{position:relative}
+.mbadge{position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;border-radius:9px;background:var(--err);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.invite{position:fixed;top:10px;left:50%;transform:translateX(-50%);width:min(94vw,520px);background:var(--panel);border:1px solid var(--accent);border-radius:16px;box-shadow:var(--shadow);padding:12px 14px;z-index:25;display:flex;flex-direction:column;gap:10px;animation:up .2s}
+.ivtext{font-weight:600;font-size:15px}
+.row2{display:flex;gap:8px}
+.friend{border:1px solid var(--thin);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--bg)}
+.fhead{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.fhead b{font-size:15px}
+.fhead .rmf{margin-left:auto;color:var(--muted);font-weight:700;padding:0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:13px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--panel);border:1px solid var(--thin)}
 
 </style>
 </head>
 <body>
+<div class="invite hidden" id="invite"></div>
 <div class="app">
   <header>
     <div class="brand">Sudoku <b>Duo</b></div>
-    <div class="pill" id="pill"></div>
     <button class="timer" id="timerBtn" aria-label="Pause">
       <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
       <svg id="playIcon" class="hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>
       <span id="time">0:00</span>
     </button>
-    <button class="menub" id="bMenu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <button class="menub" id="bMenu" aria-label="Menu"><span class="mbadge hidden" id="menuBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </header>
   <div class="banner hidden" id="banner"></div>
   <div class="peers hidden" id="peers"></div>
@@ -194,7 +206,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
     <button class="btn" id="eCancel" data-t="cancel"></button>
     <button class="btn pri" id="eStart" data-t="start"></button>
   </div>
-  <div class="status hidden" id="status"></div>
+  <div class="inforow"><span id="pill"></span><span id="status"></span></div>
   <div class="boardwrap">
     <div class="board" id="board"></div>
     <div class="cover hidden" id="cover"></div>
@@ -539,6 +551,113 @@ var SE = (function () {
     }
     return null;
   };
+
+  T.wWing = function (st) {
+    var bi = [];
+    for (var k = 0; k < 81; k++) if (PC[st.c[k]] === 2) bi.push(k);
+    for (var a = 0; a < bi.length; a++) for (var b = a + 1; b < bi.length; b++) {
+      var A = bi[a], B = bi[b];
+      if (st.c[A] !== st.c[B] || SEES[A][B]) continue;
+      var ds = DIGS[st.c[A]];
+      for (var q = 0; q < 2; q++) {
+        var x = ds[q], y = ds[1 - q], xb = bit(x);
+        for (var u = 0; u < 27; u++) {
+          var ps = UNITS[u].filter(function (c) { return st.c[c] & xb; });
+          if (ps.length !== 2) continue;
+          var p1 = ps[0], p2 = ps[1], link = null;
+          if (p1 !== A && p1 !== B && p2 !== A && p2 !== B) {
+            if (SEES[A][p1] && SEES[B][p2]) link = [p1, p2];
+            else if (SEES[A][p2] && SEES[B][p1]) link = [p2, p1];
+          }
+          if (!link) continue;
+          var el = [];
+          for (k = 0; k < 81; k++) if (k !== A && k !== B && SEES[A][k] && SEES[B][k] && (st.c[k] & bit(y))) el.push([k, y]);
+          if (el.length) return { t: "wWing", lvl: 5, d: y, x: x, cells: [A, B, link[0], link[1]], ends: [A, B], link: link, unit: u, digits: [x, y], elim: el };
+        }
+      }
+    }
+    return null;
+  };
+  T.xyChain = function (st) {
+    var bi = [];
+    for (var k = 0; k < 81; k++) if (PC[st.c[k]] === 2) bi.push(k);
+    for (var s = 0; s < bi.length; s++) {
+      var start = bi[s];
+      var sd = DIGS[st.c[start]];
+      for (var q = 0; q < 2; q++) {
+        var z = sd[q];
+        // walk: in start, z is "off" means other digit is on; the chain carries digit that is ON at each cell
+        var queue = [[start, sd[1 - q], [start]]], seen = {};
+        seen[start + ":" + sd[1 - q]] = 1;
+        while (queue.length) {
+          var cur = queue.shift(), cell = cur[0], on = cur[1], path = cur[2];
+          if (path.length > 9) continue;
+          for (var n = 0; n < bi.length; n++) {
+            var nx = bi[n];
+            if (path.indexOf(nx) >= 0 || !SEES[cell][nx] || !(st.c[nx] & bit(on))) continue;
+            var nextOn = DIGS[st.c[nx] & ~bit(on)][0];
+            var npath = path.concat([nx]);
+            if (nextOn === z && npath.length >= 4) {
+              var el = [];
+              for (k = 0; k < 81; k++) if (npath.indexOf(k) < 0 && SEES[start][k] && SEES[nx][k] && (st.c[k] & bit(z))) el.push([k, z]);
+              if (el.length) return { t: "xyChain", lvl: 5, d: z, cells: npath, elim: el };
+            }
+            var key = nx + ":" + nextOn;
+            if (!seen[key]) { seen[key] = 1; queue.push([nx, nextOn, npath]); }
+          }
+        }
+      }
+    }
+    return null;
+  };
+  T.finnedXWing = function (st) {
+    for (var d = 1; d <= 9; d++) {
+      var bb = bit(d);
+      for (var dir = 0; dir < 2; dir++) {
+        var base = dir === 0 ? 0 : 9, pos = [];
+        for (var L = 0; L < 9; L++) pos.push(UNITS[base + L].filter(function (x) { return st.c[x] & bb; }));
+        var cross = function (x) { return dir === 0 ? COL[x] : ROW[x]; };
+        for (var r1 = 0; r1 < 9; r1++) {
+          if (pos[r1].length !== 2) continue;
+          var c1 = cross(pos[r1][0]), c2 = cross(pos[r1][1]);
+          for (var r2 = 0; r2 < 9; r2++) {
+            if (r2 === r1 || pos[r2].length < 3) continue;
+            var cs = pos[r2].map(cross);
+            if (cs.indexOf(c1) < 0 || cs.indexOf(c2) < 0) continue;
+            var fins = pos[r2].filter(function (x) { var cc = cross(x); return cc !== c1 && cc !== c2; });
+            var fb = BOX[fins[0]];
+            if (!fins.every(function (x) { return BOX[x] === fb; })) continue;
+            var corner = pos[r2].filter(function (x) { return BOX[x] === fb && fins.indexOf(x) < 0; })[0];
+            if (corner === undefined) continue;
+            var cc = cross(corner), el = [];
+            UNITS[(dir === 0 ? 9 : 0) + cc].forEach(function (x) {
+              var line = dir === 0 ? ROW[x] : COL[x];
+              if (BOX[x] === fb && line !== r1 && line !== r2 && (st.c[x] & bb)) el.push([x, d]);
+            });
+            if (el.length) return { t: "finnedXWing", lvl: 5, d: d, dir: dir, lines: [r1, r2], covers: [c1, c2], fins: fins, cells: pos[r1].concat(pos[r2]), elim: el };
+          }
+        }
+      }
+    }
+    return null;
+  };
+  T.uniqueRect = function (st) {
+    for (var r1 = 0; r1 < 9; r1++) for (var r2 = r1 + 1; r2 < 9; r2++) for (var c1 = 0; c1 < 9; c1++) for (var c2 = c1 + 1; c2 < 9; c2++) {
+      var cs = [r1 * 9 + c1, r1 * 9 + c2, r2 * 9 + c1, r2 * 9 + c2];
+      var boxes = {}; cs.forEach(function (x) { boxes[BOX[x]] = 1; });
+      if (Object.keys(boxes).length !== 2) continue;
+      if (cs.some(function (x) { return st.v[x]; })) continue;
+      var bis = cs.filter(function (x) { return PC[st.c[x]] === 2; });
+      if (bis.length !== 3) continue;
+      var m = st.c[bis[0]];
+      if (st.c[bis[1]] !== m || st.c[bis[2]] !== m) continue;
+      var other = cs.filter(function (x) { return bis.indexOf(x) < 0; })[0];
+      if ((st.c[other] & m) !== m) continue;
+      var el = DIGS[m].map(function (dd) { return [other, dd]; });
+      return { t: "uniqueRect", lvl: 4, cells: cs, other: other, digits: DIGS[m], elim: el };
+    }
+    return null;
+  };
   T.nakedPair = nakedSubset(2, 2, "nakedPair");
   T.hiddenPair = hiddenSubset(2, 2, "hiddenPair");
   T.nakedTriple = nakedSubset(3, 3, "nakedTriple");
@@ -549,12 +668,12 @@ var SE = (function () {
   T.swordfish = fish(3, 4, "swordfish");
 
   var ORDER = ["hiddenSingle", "nakedSingle", "lockedCandidates", "nakedPair", "hiddenPair",
-    "nakedTriple", "hiddenTriple", "xWing", "nakedQuad", "xyWing", "xyzWing", "swordfish", "hiddenQuad", "colorTrap"];
+    "nakedTriple", "hiddenTriple", "xWing", "nakedQuad", "xyWing", "xyzWing", "swordfish", "hiddenQuad", "colorTrap", "uniqueRect", "finnedXWing", "wWing", "xyChain"];
   var FN = {
     hiddenSingle: T.hiddenSingle, nakedSingle: T.nakedSingle, lockedCandidates: T.lockedCandidates,
     nakedPair: T.nakedPair, hiddenPair: T.hiddenPair, nakedTriple: T.nakedTriple, hiddenTriple: T.hiddenTriple,
     xWing: T.xWing, nakedQuad: T.nakedQuad, xyWing: T.xyWing, xyzWing: T.xyzWing, swordfish: T.swordfish,
-    hiddenQuad: T.hiddenQuad, colorTrap: T.coloring
+    hiddenQuad: T.hiddenQuad, colorTrap: T.coloring, uniqueRect: T.uniqueRect, finnedXWing: T.finnedXWing, wWing: T.wWing, xyChain: T.xyChain
   };
   function findStep(st) {
     for (var q = 0; q < ORDER.length; q++) {
@@ -563,20 +682,21 @@ var SE = (function () {
     }
     return null;
   }
-  var WEIGHT = { 1: 1, 2: 6, 3: 20, 4: 50 };
+  var WEIGHT = { 1: 1, 2: 6, 3: 20, 4: 50, 5: 90 };
   function rate(values) {
-    var st = newState(values), maxLvl = 0, score = 0, steps = 0, used = {};
+    var st = newState(values), maxLvl = 0, score = 0, steps = 0, used = {}, hard = 0;
     while (true) {
       var empty = 0;
       for (var k = 0; k < 81; k++) if (!st.v[k]) empty++;
       if (!empty) break;
       var s = findStep(st);
-      if (!s) return { solved: false, maxLevel: 5, score: score, used: used };
+      if (!s) return { solved: false, maxLevel: 6, score: score, used: used };
       if (s.lvl > maxLvl) maxLvl = s.lvl;
+      if (s.lvl >= 4) hard++;
       score += WEIGHT[s.lvl]; steps++; used[s.t] = (used[s.t] || 0) + 1;
       applyStep(st, s);
     }
-    return { solved: true, maxLevel: maxLvl, score: score, steps: steps, used: used };
+    return { solved: true, maxLevel: maxLvl, score: score, steps: steps, used: used, hard: hard };
   }
 
   // ---------- generator ----------
@@ -596,6 +716,16 @@ var SE = (function () {
     }
     return { puzzle: puz, solution: full };
   }
+  // expert: needs the hardest techniques (level 5) or at least three level-4 steps
+  function accept(r, level) {
+    if (level === 4) {
+      if (r.maxLevel !== 5 || r.hard < 4) return false;
+      var kinds = 0;
+      ["xyWing", "xyzWing", "swordfish", "hiddenQuad", "colorTrap", "colorWrap", "uniqueRect", "finnedXWing", "wWing", "xyChain"].forEach(function (k) { if (r.used[k]) kinds++; });
+      return kinds >= 2;
+    }
+    return r.maxLevel === level;
+  }
   function generate(seed, levelName, maxTries) {
     var level = LEVELS[levelName] || 2, rand = makeRng(seed + "|" + levelName);
     maxTries = maxTries || 4000;
@@ -603,7 +733,7 @@ var SE = (function () {
     for (var t = 0; t < maxTries; t++) {
       var g = generateOne(rand, level), r = rate(g.puzzle);
       if (!r.solved) continue;
-      if (r.maxLevel === level) { g.rating = r; g.tries = t + 1; return g; }
+      if (accept(r, level)) { g.rating = r; g.tries = t + 1; return g; }
       if (r.maxLevel < level && (!best || r.maxLevel > best.rating.maxLevel)) { g.rating = r; best = g; }
     }
     return best;
@@ -636,10 +766,103 @@ window.FIREBASE_CONFIG = {"apiKey":"AIzaSyDk-yI_ShBp4CoVYgu1rbC9vNYKYVGCzc4","au
   function load(src) { return new Promise(function (res, rej) { var s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
   var V = "10.12.2";
   var ready = load("https://www.gstatic.com/firebasejs/" + V + "/firebase-app-compat.js")
-    .then(function () { return load("https://www.gstatic.com/firebasejs/" + V + "/firebase-database-compat.js"); })
-    .then(function () { firebase.initializeApp(CFG); return firebase.database(); })
+    .then(function () { return Promise.all([load("https://www.gstatic.com/firebasejs/" + V + "/firebase-database-compat.js"), load("https://www.gstatic.com/firebasejs/" + V + "/firebase-auth-compat.js")]); })
+    .then(function () {
+      firebase.initializeApp(CFG);
+      var db = firebase.database();
+      return new Promise(function (res) {
+        var done = false, fin = function () { if (!done) { done = true; var u = firebase.auth().currentUser; if (u) uid = u.uid; res(db); } };
+        try { var un = firebase.auth().onAuthStateChanged(function () { try { un(); } catch (e) {} fin(); }); } catch (e) { fin(); }
+        setTimeout(fin, 6000);
+      });
+    })
     .catch(function () { return null; });
+  window.ACCT = makeAccounts();
 
+
+  function makeAccounts() {
+    var A = { user: null }, DB = null;
+    function em(n) { return String(n).toLowerCase() + "@players.sudoku-duo.app"; }
+    var TS = function () { return firebase.database.ServerValue.TIMESTAMP; };
+    A.ready = ready.then(function (db) {
+      DB = db; if (!db) return;
+      var u = firebase.auth().currentUser;
+      if (!u) return;
+      A.user = { uid: u.uid, name: u.displayName || (u.email || "").split("@")[0] };
+      db.ref(".info/connected").on("value", function (s) {
+        if (!s.val()) return;
+        var r = db.ref("status/" + u.uid);
+        r.onDisconnect().set({ on: false, at: TS() });
+        r.set({ on: true, at: TS() });
+      });
+    });
+    A.available = function () { return !!DB; };
+    A.signUp = function (name, pw) {
+      var ln = String(name).toLowerCase(), user;
+      return A.ready.then(function () {
+        if (!DB) throw { code: "offline" };
+        return DB.ref("usernames/" + ln).once("value");
+      }).then(function (s) {
+        if (s.exists()) throw { code: "taken" };
+        return firebase.auth().createUserWithEmailAndPassword(em(name), pw);
+      }).then(function (cred) {
+        user = cred.user;
+        return DB.ref("usernames/" + ln).set(user.uid).catch(function () { return user.delete().then(function () { throw { code: "taken" }; }); });
+      }).then(function () {
+        return user.updateProfile({ displayName: name });
+      }).then(function () {
+        return Promise.all([DB.ref("users/" + user.uid + "/profile").set({ name: name }), DB.ref("names/" + user.uid).set(name)]);
+      });
+    };
+    A.signIn = function (name, pw) { return A.ready.then(function () { if (!DB) throw { code: "offline" }; return firebase.auth().signInWithEmailAndPassword(em(name), pw); }); };
+    A.signOut = function () {
+      var u = firebase.auth().currentUser;
+      var p = u && DB ? DB.ref("status/" + u.uid).set({ on: false, at: TS() }).catch(function () {}) : Promise.resolve();
+      return p.then(function () { return firebase.auth().signOut(); });
+    };
+    A.find = function (name) { return DB.ref("usernames/" + String(name).toLowerCase()).once("value").then(function (s) { return s.val(); }); };
+    A.sendRequest = function (to) { return DB.ref("users/" + to + "/requests/" + A.user.uid).set({ name: A.user.name, at: TS() }); };
+    A.accept = function (from) {
+      var me = A.user.uid;
+      return DB.ref("users/" + me + "/friends/" + from).set(true)
+        .then(function () { return DB.ref("users/" + from + "/friends/" + me).set(true); })
+        .then(function () { return DB.ref("users/" + me + "/requests/" + from).remove(); });
+    };
+    A.decline = function (from) { return DB.ref("users/" + A.user.uid + "/requests/" + from).remove(); };
+    A.removeFriend = function (f) {
+      var me = A.user.uid;
+      return DB.ref("users/" + me + "/friends/" + f).remove().then(function () { return DB.ref("users/" + f + "/friends/" + me).remove().catch(function () {}); });
+    };
+    A.onRequests = function (cb) {
+      DB.ref("users/" + A.user.uid + "/requests").on("value", function (s) {
+        var v = s.val() || {};
+        cb(Object.keys(v).map(function (k) { return { uid: k, name: String((v[k] && v[k].name) || "?").slice(0, 30) }; }));
+      });
+    };
+    A.onFriends = function (cb) {
+      var info = {}, watching = {}, list = [];
+      var emit = function () { cb(list.map(function (id) { return { uid: id, name: (info[id] && info[id].name) || "…", on: !!(info[id] && info[id].on), at: info[id] && info[id].at }; })); };
+      DB.ref("users/" + A.user.uid + "/friends").on("value", function (s) {
+        list = Object.keys(s.val() || {});
+        list.forEach(function (id) {
+          if (watching[id]) return;
+          watching[id] = 1; info[id] = info[id] || {};
+          DB.ref("names/" + id).on("value", function (x) { info[id].name = String(x.val() || "?").slice(0, 30); emit(); });
+          DB.ref("status/" + id).on("value", function (x) { var v = x.val() || {}; info[id].on = !!v.on; info[id].at = v.at; emit(); });
+        });
+        emit();
+      });
+    };
+    A.sendInvite = function (to, item) {
+      item.from = A.user.uid; item.name = A.user.name; item.at = TS();
+      return DB.ref("users/" + to + "/inbox").push(item);
+    };
+    A.onInbox = function (cb) {
+      DB.ref("users/" + A.user.uid + "/inbox").on("child_added", function (s) { var v = s.val(); if (v) { v.id = s.key; cb(v); } });
+    };
+    A.ack = function (id) { return DB.ref("users/" + A.user.uid + "/inbox/" + id).remove(); };
+    return A;
+  }
   function snapDoc(id, val) { return { id: id, exists: val != null, data: function () { return val == null ? undefined : val; }, metadata: { fromCache: false, hasPendingWrites: false } }; }
 
   function makeRoom(db, name) {
@@ -717,7 +940,7 @@ window.FIREBASE_CONFIG = {"apiKey":"AIzaSyDk-yI_ShBp4CoVYgu1rbC9vNYKYVGCzc4","au
 var STR = {
 en: {
   easy:"Easy", medium:"Medium", hard:"Hard", expert:"Expert", custom:"Own puzzle",
-  easyD:"Singles only", mediumD:"Pairs & pointing", hardD:"Triples & X-Wing", expertD:"Wings, coloring & fish",
+  easyD:"Singles only", mediumD:"Pairs & pointing", hardD:"Triples & X-Wing", expertD:"Chains, wings & fins",
   daily:"Daily", undo:"Undo", erase:"Erase", notes:"Notes", hint:"Hint",
   nNew:"New", nShare:"Share", nTogether:"Together", nMore:"More",
   newGame:"New game", random:"Random puzzle", dailyH:"Puzzle of the day",
@@ -769,11 +992,19 @@ en: {
   sHighlight:"Highlighting", sHlUnit:"Highlight row, column & box", sSame:"Highlight same numbers", sSameNotes:"Highlight same numbers in notes",
   sGameplay:"Gameplay", sInput:"Input", iCell:"Cell first", iDigit:"Number first",
   sInputP:"Number first: tap a number on the pad, then tap all the cells where it goes. Tap the number again to stop.",
-  sCelebrate:"Celebration animation", sGeneral:"General", resetAll:"Reset all settings", mistakeN:"Mistake {n} of {m}", overT:"Game over", overP:"That was mistake number {n}.", overCont:"Keep playing (one more chance)", outShort:"out", sMistLimit:"Mistake limit", sMistLimitP:"The game ends after this many wrong numbers. Wrong numbers are shown in red while a limit is on.", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
+  sCelebrate:"Celebration animation", sGeneral:"General", resetAll:"Reset all settings", mistakeN:"Mistake {n} of {m}", overT:"Game over", overP:"That was mistake number {n}.", overCont:"Keep playing (one more chance)", outShort:"out", sMistLimit:"Mistake limit", sMistLimitP:"The game ends after this many wrong numbers. Wrong numbers are shown in red while a limit is on.", frTitle:"Friends", frMenuIn:"Invite friends directly", frMenuOut:"Create an account to add friends", frSignedIn:"Signed in as {n}", frAdd:"Add a friend", frSend:"Send request", frAddP:"Ask for their username. Yours is {n}.",
+  frSelf:"That's you 🙂", frNotFound:"No player called “{n}”.", frAlready:"{n} is already your friend.", frSent:"Friend request sent to {n}.", frReqs:"Friend requests", frAccept:"Accept", frNowFriends:"You and {n} are now friends!",
+  frReqNew:"{n} wants to be your friend", frList:"Your friends", frNone:"No friends yet — add someone above.", frCoop:"Co-op", frRace:"Race", frPuzzle:"Send puzzle", frHelp:"Ask for help", frChal:"Challenge",
+  frNoGame:"Open a puzzle first.", frInvited:"Invite sent to {n}. Waiting for them…", frSentPuzzle:"Sent to {n}.", frOnline:"online", frOffline:"offline", frRemoveQ:"Remove {n} as a friend?", frRemove:"Remove",
+  aWhy:"With an account you can add friends and invite them straight from the app — no links needed. Playing without an account still works.",
+  aSignup:"Create account", aLogin:"Log in", aLogout:"Log out", aUser:"Username", aPw:"Password (min. 6 characters)", aCreate:"Create account",
+  aPwNote:"Write your password down — it can't be reset.", aUserRule:"Username: 3–16 letters, numbers or _", aTaken:"That username is already taken.", aWeak:"The password needs at least 6 characters.",
+  aWrong:"Wrong username or password.", aNotEnabled:"Accounts aren't switched on in Firebase yet.", aOffline:"Can't reach the server right now.", aErr:"Something went wrong",
+  ivCoop:"{n} invites you to solve a puzzle together", ivRace:"{n} challenges you to a live race", ivPuzzle:"{n} sent you a puzzle", ivHelp:"{n} is stuck and asks for your help", ivChal:"{n} challenges you: beat {t}!", ivJoin:"Join", ivLater:"Later", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
   easy:"Leicht", medium:"Mittel", hard:"Schwer", expert:"Experte", custom:"Eigenes Rätsel",
-  easyD:"Nur Singles", mediumD:"Paare & Zeiger", hardD:"Drillinge & X-Wing", expertD:"Wings, Färben & Fische",
+  easyD:"Nur Singles", mediumD:"Paare & Zeiger", hardD:"Drillinge & X-Wing", expertD:"Ketten, Wings & Flossen",
   daily:"Täglich", undo:"Zurück", erase:"Löschen", notes:"Notizen", hint:"Tipp",
   nNew:"Neu", nShare:"Teilen", nTogether:"Zusammen", nMore:"Mehr",
   newGame:"Neues Spiel", random:"Zufälliges Rätsel", dailyH:"Rätsel des Tages",
@@ -825,7 +1056,15 @@ de: {
   sHighlight:"Hervorhebung", sHlUnit:"Zeile, Spalte & Block hervorheben", sSame:"Gleiche Zahlen hervorheben", sSameNotes:"Gleiche Zahlen in Notizen hervorheben",
   sGameplay:"Spielweise", sInput:"Eingabe", iCell:"Erst Zelle", iDigit:"Erst Zahl",
   sInputP:"Erst Zahl: Tippe eine Zahl im Zahlenfeld an und dann alle Zellen, in die sie kommt. Zahl nochmal antippen zum Beenden.",
-  sCelebrate:"Jubel-Animation", sGeneral:"Allgemein", resetAll:"Alle Einstellungen zurücksetzen", mistakeN:"Fehler {n} von {m}", overT:"Spiel vorbei", overP:"Das war Fehler Nummer {n}.", overCont:"Weiterspielen (noch eine Chance)", outShort:"raus", sMistLimit:"Fehlerlimit", sMistLimitP:"Das Spiel endet nach so vielen falschen Zahlen. Solange ein Limit aktiv ist, werden falsche Zahlen rot angezeigt.", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
+  sCelebrate:"Jubel-Animation", sGeneral:"Allgemein", resetAll:"Alle Einstellungen zurücksetzen", mistakeN:"Fehler {n} von {m}", overT:"Spiel vorbei", overP:"Das war Fehler Nummer {n}.", overCont:"Weiterspielen (noch eine Chance)", outShort:"raus", sMistLimit:"Fehlerlimit", sMistLimitP:"Das Spiel endet nach so vielen falschen Zahlen. Solange ein Limit aktiv ist, werden falsche Zahlen rot angezeigt.", frTitle:"Freunde", frMenuIn:"Freunde direkt einladen", frMenuOut:"Konto erstellen, um Freunde hinzuzufügen", frSignedIn:"Angemeldet als {n}", frAdd:"Freund hinzufügen", frSend:"Anfrage senden", frAddP:"Frag nach dem Benutzernamen. Deiner ist {n}.",
+  frSelf:"Das bist du 🙂", frNotFound:"Kein Spieler namens „{n}“.", frAlready:"{n} ist schon dein Freund.", frSent:"Freundschaftsanfrage an {n} gesendet.", frReqs:"Freundschaftsanfragen", frAccept:"Annehmen", frNowFriends:"Du und {n} seid jetzt Freunde!",
+  frReqNew:"{n} möchte mit dir befreundet sein", frList:"Deine Freunde", frNone:"Noch keine Freunde — füge oben jemanden hinzu.", frCoop:"Koop", frRace:"Rennen", frPuzzle:"Rätsel senden", frHelp:"Um Hilfe bitten", frChal:"Herausfordern",
+  frNoGame:"Öffne zuerst ein Rätsel.", frInvited:"Einladung an {n} gesendet. Warte auf Antwort…", frSentPuzzle:"An {n} gesendet.", frOnline:"online", frOffline:"offline", frRemoveQ:"{n} als Freund entfernen?", frRemove:"Entfernen",
+  aWhy:"Mit einem Konto kannst du Freunde hinzufügen und direkt aus der App einladen — ohne Links. Spielen ohne Konto geht weiterhin.",
+  aSignup:"Konto erstellen", aLogin:"Anmelden", aLogout:"Abmelden", aUser:"Benutzername", aPw:"Passwort (mind. 6 Zeichen)", aCreate:"Konto erstellen",
+  aPwNote:"Schreib dir dein Passwort auf — es kann nicht zurückgesetzt werden.", aUserRule:"Benutzername: 3–16 Buchstaben, Zahlen oder _", aTaken:"Dieser Benutzername ist schon vergeben.", aWeak:"Das Passwort braucht mindestens 6 Zeichen.",
+  aWrong:"Falscher Benutzername oder falsches Passwort.", aNotEnabled:"Konten sind in Firebase noch nicht eingeschaltet.", aOffline:"Der Server ist gerade nicht erreichbar.", aErr:"Etwas ist schiefgelaufen",
+  ivCoop:"{n} lädt dich ein, gemeinsam ein Rätsel zu lösen", ivRace:"{n} fordert dich zu einem Live-Rennen heraus", ivPuzzle:"{n} hat dir ein Rätsel geschickt", ivHelp:"{n} kommt nicht weiter und bittet um Hilfe", ivChal:"{n} fordert dich heraus: Schlag {t}!", ivJoin:"Beitreten", ivLater:"Später", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
 var BOXPOS = {
@@ -836,11 +1075,11 @@ var TECH = {
   en:{hiddenSingle:"Hidden Single",nakedSingle:"Naked Single",pointing:"Pointing (Locked Candidates)",claiming:"Claiming (Box-Line Reduction)",
     nakedPair:"Naked Pair",hiddenPair:"Hidden Pair",nakedTriple:"Naked Triple",hiddenTriple:"Hidden Triple",nakedQuad:"Naked Quad",hiddenQuad:"Hidden Quad",
     xWing:"X-Wing",swordfish:"Swordfish",xyWing:"XY-Wing",xyzWing:"XYZ-Wing",colorTrap:"Simple Coloring",colorWrap:"Simple Coloring",
-    mistake:"Check your numbers",badNote:"Check your notes",reveal:"Tough spot"},
+    wWing:"W-Wing",xyChain:"XY-Chain",finnedXWing:"Finned X-Wing",uniqueRect:"Unique Rectangle",mistake:"Check your numbers",badNote:"Check your notes",reveal:"Tough spot"},
   de:{hiddenSingle:"Versteckter Single",nakedSingle:"Nackter Single",pointing:"Zeiger (Block → Linie)",claiming:"Linie → Block",
     nakedPair:"Nacktes Paar",hiddenPair:"Verstecktes Paar",nakedTriple:"Nackter Drilling",hiddenTriple:"Versteckter Drilling",nakedQuad:"Nackter Vierling",hiddenQuad:"Versteckter Vierling",
     xWing:"X-Wing",swordfish:"Schwertfisch",xyWing:"XY-Wing",xyzWing:"XYZ-Wing",colorTrap:"Einfaches Färben",colorWrap:"Einfaches Färben",
-    mistake:"Zahlen prüfen",badNote:"Notizen prüfen",reveal:"Kniffliger Moment"}
+    wWing:"W-Wing",xyChain:"XY-Kette",finnedXWing:"X-Wing mit Flosse",uniqueRect:"Eindeutiges Rechteck",mistake:"Zahlen prüfen",badNote:"Notizen prüfen",reveal:"Kniffliger Moment"}
 };
 
 var HINTS = (function () {
@@ -969,6 +1208,39 @@ var HINTS = (function () {
           : level === 2 ? (de ? "Drehpunkt " + cn(p2, L) + " (" + step.digits.join("/") + "), Flügel " + cn(A2, L) + " und " + cn(B2, L) + ". Gemeinsame Ziffer: " + d + "." : "Pivot " + cn(p2, L) + " (" + step.digits.join("/") + "), wings " + cn(A2, L) + " and " + cn(B2, L) + ". Shared digit: " + d + ".")
           : (de ? "Egal welche Ziffer im Drehpunkt landet — einer der drei (Drehpunkt oder ein Flügel) wird zur " + d + ". Eine Zelle, die alle drei sieht, kann also keine " + d + " sein: " + E + "."
             : "Whatever digit the pivot gets, one of the three cells (pivot or a wing) ends up as " + d + ". So a cell that sees all three can't be " + d + ": " + E + ".");
+        return out;
+      case "wWing":
+        var A = step.ends[0], B = step.ends[1], x = step.x, y = d;
+        if (level >= 2) out.nm = [[A, x], [A, y], [B, x], [B, y], [step.link[0], x], [step.link[1], x]];
+        out.text = level === 1 ? (de ? "Suche zwei gleiche Zellen mit nur zwei Kandidaten, die sich nicht sehen." : "Look for two identical cells with only two candidates that don't see each other.")
+          : level === 2 ? (de ? cn(A, L) + " und " + cn(B, L) + " sind beide " + x + "/" + y + ". In " + un(step.unit, L) + " kann die " + x + " nur in " + cn(step.link[0], L) + " oder " + cn(step.link[1], L) + " stehen." : cn(A, L) + " and " + cn(B, L) + " are both " + x + "/" + y + ". In " + un(step.unit, L) + ", the " + x + " can only be in " + cn(step.link[0], L) + " or " + cn(step.link[1], L) + ".")
+          : (de ? "Eine der beiden Verbindungszellen ist die " + x + ". Die sieht dann " + cn(A, L) + " oder " + cn(B, L) + ", also wird diese Zelle zur " + y + ". Eine von beiden ist also sicher die " + y + " — wer beide sieht, kann keine " + y + " sein: " + E + "."
+            : "One of the two link cells is the " + x + ". That one sees " + cn(A, L) + " or " + cn(B, L) + ", so that cell becomes " + y + ". So one of the pair is definitely " + y + " — any cell that sees both can't be " + y + ": " + E + ".");
+        return out;
+      case "xyChain":
+        var cs = step.cells, s0 = cs[0], s1 = cs[cs.length - 1];
+        if (level >= 2) out.nm = [[s0, d], [s1, d]];
+        out.text = level === 1 ? (de ? "Folge einer Kette von Zellen mit je nur zwei Kandidaten." : "Follow a chain of cells that each have only two candidates.")
+          : level === 2 ? (de ? "Kette: " + cl(cs, L) + ". Anfang und Ende enthalten beide die " + d + "." : "Chain: " + cl(cs, L) + ". Both ends contain " + d + ".")
+          : (de ? "Ist " + cn(s0, L) + " nicht die " + d + ", erzwingt jede Zelle der Kette die nächste — bis " + cn(s1, L) + " die " + d + " sein muss. Also ist mindestens eines der Enden die " + d + ". Zellen, die beide Enden sehen, können keine " + d + " sein: " + E + "."
+            : "If " + cn(s0, L) + " isn't " + d + ", each cell of the chain forces the next — until " + cn(s1, L) + " has to be " + d + ". So at least one end is " + d + ". Cells that see both ends can't be " + d + ": " + E + ".");
+        return out;
+      case "finnedXWing":
+        var bw2 = lineWord(step.dir, L, true), cw2 = lineWord(1 - step.dir, L, true);
+        var b2 = step.lines.map(function (x) { return x + 1; }), c2 = step.covers.map(function (x) { return x + 1; });
+        if (level >= 2) { out.nm = step.cells.map(function (x) { return [x, d]; }); out.cA = step.fins.slice(); }
+        out.text = level === 1 ? (de ? "Schau, wo die " + d + " in den " + bw2 + " hin kann — fast ein X-Wing." : "Look at where the " + d + " can go in the " + bw2 + " — it's almost an X-Wing.")
+          : level === 2 ? (de ? bw2 + " " + dl(b2, L) + " bilden für die " + d + " fast einen X-Wing in den " + cw2 + " " + dl(c2, L) + " — bis auf die grüne „Flosse“ " + cl(step.fins, L) + "." : bw2 + " " + dl(b2, L) + " almost form an X-Wing for " + d + " in " + cw2 + " " + dl(c2, L) + " — except for the green “fin” " + cl(step.fins, L) + ".")
+          : (de ? "Entweder gilt der X-Wing, oder die " + d + " steht in der Flosse. In beiden Fällen ist sie aus Zellen ausgeschlossen, die im Block der Flosse UND in der X-Wing-Spalte liegen: " + E + "."
+            : "Either the X-Wing holds, or the " + d + " is in the fin. In both cases it's ruled out of cells that are in the fin's box AND in the X-Wing line: " + E + ".");
+        return out;
+      case "uniqueRect":
+        var o = step.other, ab = step.digits;
+        if (level >= 2) out.nm = step.cells.map(function (x) { return [x, ab[0]]; }).concat(step.cells.map(function (x) { return [x, ab[1]]; }));
+        out.text = level === 1 ? (de ? "Suche ein Rechteck aus vier Zellen in zwei Blöcken, die fast alle dieselben zwei Kandidaten haben." : "Look for a rectangle of four cells in two boxes that almost all share the same two candidates.")
+          : level === 2 ? (de ? "Die Zellen " + cl(step.cells, L) + " bilden ein Rechteck mit " + ab.join("/") + ". Nur " + cn(o, L) + " hat noch weitere Kandidaten." : "The cells " + cl(step.cells, L) + " form a rectangle with " + ab.join("/") + ". Only " + cn(o, L) + " has extra candidates.")
+          : (de ? "Wären alle vier Zellen nur " + ab.join("/") + ", könnte man die beiden Ziffern tauschen — das Rätsel hätte zwei Lösungen. Ein gutes Sudoku hat nur eine. Also kann " + cn(o, L) + " weder " + ab[0] + " noch " + ab[1] + " sein."
+            : "If all four cells were just " + ab.join("/") + ", you could swap the two digits — the puzzle would have two solutions. A proper sudoku has only one. So " + cn(o, L) + " can't be " + ab[0] + " or " + ab[1] + ".");
         return out;
       case "colorTrap": case "colorWrap":
         if (level >= 2) { out.pat = []; out.cA = step.groupA.slice(); out.cB = step.groupB.slice(); }
@@ -1117,6 +1389,7 @@ function save(now) {
 }
 function loadSaved(pid) { var g = (ls("sd.games") || {})[pid]; return g && g.giv ? g : null; }
 function setGame(g) {
+  if (g && !g.entry && !g.done && (g.mist || 0) >= mistLimit()) g.over = true;
   G = g; HIST = []; HINT = null; sel = -1; paused = false; setCover(G.over ? "over" : null);
   $("#board").classList.remove("win");
   render(); renderHint(); renderBanner(); save();
@@ -1175,7 +1448,7 @@ function render() {
       else if (S.hlUnit && sel >= 0 && (SE.ROW[i] === SE.ROW[sel] || SE.COL[i] === SE.COL[sel] || SE.BOX[i] === SE.BOX[sel])) cls += " hl";
     }
     if (!E && v && !G.giv[i]) {
-      if ((S.mist === "sol" || S.mistLimit) && v !== G.sol[i]) cls += " err";
+      if (v !== G.sol[i]) cls += " err";
       else if (S.mist !== "off" && conflictAt(i)) cls += " err";
     }
     if (E && v && conflictAt(i)) cls += " err errbg";
@@ -1230,15 +1503,14 @@ function select(i) {
   render();
 }
 function blocked() { return !G || coverMode || paused || (G && G.over); }
-function mistLimit() { return S.mistLimit ? S.mistLimit + (G && G.extra || 0) : 0; }
+var MIST_LIMIT = 3;
+function mistLimit() { return MIST_LIMIT; }
 function renderStatus() {
   var s = $("#status"); if (!s) return;
-  if (!G || G.entry || !S.mistLimit) { s.classList.add("hidden"); return; }
-  s.classList.remove("hidden");
-  var lim = mistLimit(), m = G.mist || 0;
-  s.innerHTML = "";
-  s.appendChild(el("span", { text: t("mistakes") + ": " }));
-  for (var k = 0; k < lim; k++) s.appendChild(el("b", { class: k < m ? "x on" : "x", text: "✕" }));
+  if (!G || G.entry) { s.textContent = ""; return; }
+  var m = Math.min(G.mist || 0, mistLimit());
+  s.textContent = t("mistakes") + " " + m + "/" + mistLimit();
+  s.className = m ? (m >= mistLimit() - 1 ? "warn2" : "warn1") : "";
 }
 function gameOver() {
   G.over = true; HINT = null; renderHint(); save(true); render();
@@ -1386,12 +1658,11 @@ function setCover(mode, opts) {
     c.appendChild(el("h2", { text: t("overT") }));
     c.appendChild(el("p", { text: t("overP", { n: G.mist }) }));
     if (!(LIVE && LIVE.mode === "race")) {
-      c.appendChild(el("button", { class: "btn pri", text: t("overCont"), onclick: function () { G.over = false; G.extra = (G.extra || 0) + 1; setCover(null); save(true); render(); } }));
-      c.appendChild(el("button", { class: "btn", text: t("restart"), onclick: function () {
+      c.appendChild(el("button", { class: "btn pri", text: t("restart"), onclick: function () {
         var f = fresh(G.giv, G.sol, G.diff, G.label); f.chal = G.chal; setGame(f);
       } }));
     }
-    c.appendChild(el("button", { class: "btn", text: t("newPuzzle"), onclick: showNew }));
+    c.appendChild(el("button", { class: "btn" + (LIVE && LIVE.mode === "race" ? " pri" : ""), text: t("newPuzzle"), onclick: showNew }));
   } else if (mode === "racewait") {
     c.appendChild(el("h2", { text: fmt(G.el) }));
     c.appendChild(el("p", { text: t("raceWait") }));
@@ -1612,10 +1883,11 @@ function shareBox(code) {
 // ---------------- modals ----------------
 function modal(build) {
   closeModal();
+  FR.open = false;
   var sh = el("div", { class: "sheet" }), ov = el("div", { class: "overlay", onclick: function (e) { if (e.target === ov) closeModal(); } }, [sh]);
   build(sh); document.body.appendChild(ov);
 }
-function closeModal() { var o = $(".overlay"); if (o) o.remove(); }
+function closeModal() { var o = $(".overlay"); if (o) o.remove(); FR.open = false; }
 var toastT;
 function toast(msg) {
   var o = $(".toast"); if (o) o.remove(); clearTimeout(toastT);
@@ -1656,6 +1928,7 @@ function showMenu() {
       item("＋", t("nNew"), t("newGame"), showNew),
       item("↗", t("nShare"), t("shareT"), showShare),
       item("👥", t("nTogether"), t("togetherT"), showTogether),
+      hasAcct() ? item("⭐", t("frTitle") + (badgeCount() ? " (" + badgeCount() + ")" : ""), ACCT.user ? t("frMenuIn") : t("frMenuOut"), showFriends) : null,
       item("⚙", t("settings"), t("settingsD"), showMore)]));
   });
 }
@@ -1796,22 +2069,11 @@ function showMore(scrollTo) {
     sh.appendChild(toggleRow(t("sHlUnit"), "hlUnit", refresh));
     sh.appendChild(toggleRow(t("sSame"), "same", refresh));
     sh.appendChild(toggleRow(t("sSameNotes"), "sameNotes", refresh));
-    sh.appendChild(selectRow(t("mistakesMode"), "mist", [["off", t("mOff")], ["conf", t("mConf")], ["sol", t("mSol")]]));
 
     // --- gameplay
     H("sGameplay");
     sh.appendChild(segRow(t("sInput"), "inputMode", [["cell", t("iCell")], ["digit", t("iDigit")]], function () { activeD = 0; render(); }));
     sh.appendChild(el("p", { class: "legend", text: t("sInputP") }));
-    var ml = el("div", { class: "seg" });
-    [[0, t("mOff")], [1, "1"], [2, "2"], [3, "3"], [5, "5"]].forEach(function (o) {
-      ml.appendChild(el("button", { class: S.mistLimit === o[0] ? "on" : "", text: o[1], onclick: function () {
-        S.mistLimit = o[0]; saveS(); render();
-        Array.prototype.forEach.call(ml.children, function (b) { b.className = b.textContent === o[1] ? "on" : ""; });
-        if (G && G.over && (!S.mistLimit || G.mist < mistLimit())) { G.over = false; setCover(null); save(); render(); }
-      } }));
-    });
-    sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("sMistLimit") }), ml]));
-    sh.appendChild(el("p", { class: "legend", text: t("sMistLimitP") }));
     sh.appendChild(toggleRow(t("autoNotes"), "autoNotes"));
     sh.appendChild(toggleRow(t("sCelebrate"), "celebrate"));
 
@@ -1863,7 +2125,7 @@ function finishEntry() {
   if (n < 17) { toast(t("tooFew")); return; }
   var r = SE.solve(giv, 2);
   if (r.count !== 1) { toast(r.count ? t("multiSol") : t("noSol")); return; }
-  var rating = SE.rate(giv), lv = rating.solved ? DIFFS[rating.maxLevel - 1] : "custom";
+  var rating = SE.rate(giv), lv = rating.solved ? DIFFS[Math.min(rating.maxLevel, 4) - 1] : "custom";
   preEntry = null;
   setGame(fresh(giv, r.solution, lv, t("custom")));
 }
@@ -2145,6 +2407,144 @@ function showLeaderboard() {
   });
 }
 
+
+// ---------------- accounts & friends (standalone site) ----------------
+var FR = { friends: [], requests: [], inbox: [], open: false };
+function hasAcct() { return !!window.ACCT; }
+function badgeCount() { return FR.requests.length + FR.inbox.length; }
+function updateBadge() {
+  var b = $("#menuBadge"); if (!b) return;
+  var n = badgeCount(); b.textContent = n || ""; b.classList.toggle("hidden", !n);
+}
+function initFriends() {
+  if (!hasAcct()) return;
+  ACCT.ready.then(function () {
+    if (!ACCT.user) return;
+    if (S.name !== ACCT.user.name) { S.name = ACCT.user.name; saveS(); }
+    var lastF = "", lastR = "";
+    ACCT.onFriends(function (l) { var k = JSON.stringify(l.map(function (f) { return [f.uid, f.name, f.on]; })); if (k === lastF) return; lastF = k; FR.friends = l; if (FR.open) showFriends(true); });
+    ACCT.onRequests(function (l) {
+      var k = JSON.stringify(l); if (k === lastR) return; lastR = k;
+      var isNew = l.length > FR.requests.length; FR.requests = l; updateBadge();
+      if (FR.open) showFriends(true); else if (isNew) toast(t("frReqNew", { n: l[l.length - 1].name }));
+    });
+    ACCT.onInbox(function (item) { FR.inbox.push(item); updateBadge(); renderInvite(); });
+  });
+}
+function authErr(e) {
+  var c = (e && e.code) || "";
+  if (c === "taken" || c === "auth/email-already-in-use") return t("aTaken");
+  if (c === "auth/weak-password") return t("aWeak");
+  if (c === "auth/operation-not-allowed") return t("aNotEnabled");
+  if (/wrong-password|invalid-credential|user-not-found|invalid-login/.test(c)) return t("aWrong");
+  if (c === "offline" || c === "auth/network-request-failed") return t("aOffline");
+  return t("aErr") + (c ? " (" + c + ")" : "");
+}
+function showFriends(keepScroll) {
+  if (!hasAcct()) return;
+  var st = keepScroll && $(".sheet") ? $(".sheet").scrollTop : 0;
+  if (keepScroll && !FR.open) return;
+  var prevInp = keepScroll ? $(".sheet input[type=text]") : null, prevVal = prevInp ? prevInp.value : "", hadFocus = prevInp && document.activeElement === prevInp;
+  modal(function (sh) {
+    FR.open = true;
+    sh.setAttribute("data-sheet", "friends");
+    sh.appendChild(el("h2", { text: t("frTitle") }));
+    if (!ACCT.available()) { sh.appendChild(el("p", { text: t("aOffline") })); return; }
+    if (!ACCT.user) { authForm(sh); return; }
+    sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("frSignedIn", { n: ACCT.user.name }) }),
+      el("button", { class: "btn", text: t("aLogout"), onclick: function () { ACCT.signOut().then(function () { location.reload(); }); } })]));
+    // add friend
+    sh.appendChild(el("h4", { text: t("frAdd") }));
+    var inp = el("input", { type: "text", placeholder: t("aUser"), autocapitalize: "off", autocomplete: "off" });
+    var send = function () {
+      var n = inp.value.trim();
+      if (!n) return;
+      if (n.toLowerCase() === ACCT.user.name.toLowerCase()) { toast(t("frSelf")); return; }
+      ACCT.find(n).then(function (uid) {
+        if (!uid) { toast(t("frNotFound", { n: n })); return; }
+        if (FR.friends.some(function (f) { return f.uid === uid; })) { toast(t("frAlready", { n: n })); return; }
+        return ACCT.sendRequest(uid).then(function () { inp.value = ""; toast(t("frSent", { n: n })); });
+      }).catch(function (e) { toast(authErr(e)); });
+    };
+    sh.appendChild(el("div", { class: "grid2", style: "grid-template-columns:1fr auto" }, [inp, el("button", { class: "btn pri", text: t("frSend"), onclick: send })]));
+    sh.appendChild(el("p", { class: "legend", text: t("frAddP", { n: ACCT.user.name }) }));
+    // requests
+    if (FR.requests.length) {
+      sh.appendChild(el("h4", { text: t("frReqs") }));
+      FR.requests.forEach(function (r) {
+        sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: r.name }), el("div", { class: "row2" }, [
+          el("button", { class: "btn pri", text: t("frAccept"), onclick: function () { ACCT.accept(r.uid).then(function () { toast(t("frNowFriends", { n: r.name })); }, function (e) { toast(authErr(e)); }); } }),
+          el("button", { class: "btn", text: "✕", onclick: function () { ACCT.decline(r.uid); } })])]));
+      });
+    }
+    // friends
+    sh.appendChild(el("h4", { text: t("frList") }));
+    if (!FR.friends.length) sh.appendChild(el("p", { text: t("frNone") }));
+    FR.friends.slice().sort(function (x, y) { return (y.on - x.on) || x.name.localeCompare(y.name); }).forEach(function (f) {
+      var acts = el("div", { class: "chips" });
+      var chip = function (label, fn) { acts.appendChild(el("button", { class: "chip", text: label, onclick: fn })); };
+      var need = function () { if (!G || G.entry) { toast(t("frNoGame")); return false; } return true; };
+      chip("🤝 " + t("frCoop"), function () { if (!need()) return; ACCT.sendInvite(f.uid, { type: "coop", code: encode({ live: "coop", prog: true }) }).then(function () { toast(t("frInvited", { n: f.name })); closeModal(); startLive("coop", true); }, function (e) { toast(authErr(e)); }); });
+      chip("🏁 " + t("frRace"), function () { if (!need()) return; ACCT.sendInvite(f.uid, { type: "race", code: encode({ live: "race" }) }).then(function () { toast(t("frInvited", { n: f.name })); closeModal(); startLive("race", true); }, function (e) { toast(authErr(e)); }); });
+      chip("✉️ " + t("frPuzzle"), function () { if (!need()) return; ACCT.sendInvite(f.uid, { type: "puzzle", code: encode({}) }).then(function () { toast(t("frSentPuzzle", { n: f.name })); }); });
+      if (G && !G.entry && !G.done && (G.vals.some(Boolean) || G.notes.some(Boolean))) chip("🆘 " + t("frHelp"), function () { ACCT.sendInvite(f.uid, { type: "help", code: encode({ prog: true }) }).then(function () { toast(t("frSentPuzzle", { n: f.name })); }); });
+      if (G && G.done) chip("⏱️ " + t("frChal"), function () { ACCT.sendInvite(f.uid, { type: "challenge", code: encode({ time: G.el }), ms: Math.round(G.el) }).then(function () { toast(t("frSentPuzzle", { n: f.name })); }); });
+      sh.appendChild(el("div", { class: "friend" }, [
+        el("div", { class: "fhead" }, [el("span", { class: "dot", style: "background:" + (f.on ? "var(--ok)" : "var(--thin)") }), el("b", { text: f.name }),
+          el("span", { class: "legend", text: f.on ? t("frOnline") : t("frOffline") }),
+          el("button", { class: "rmf", text: "…", onclick: function () {
+            modal(function (s2) {
+              s2.appendChild(el("h2", { text: t("frRemoveQ", { n: f.name }) }));
+              s2.appendChild(el("div", { class: "grid2" }, [el("button", { class: "btn pri", text: t("frRemove"), onclick: function () { ACCT.removeFriend(f.uid).then(function () { showFriends(); }); } }), el("button", { class: "btn", text: t("cancel"), onclick: function () { showFriends(); } })]));
+            });
+          } })]), acts]));
+    });
+    if (prevVal) inp.value = prevVal;
+    if (hadFocus) setTimeout(function () { inp.focus(); }, 0);
+    if (st) setTimeout(function () { sh.scrollTop = st; }, 0);
+  });
+}
+function authForm(sh) {
+  var mode = "up";
+  sh.appendChild(el("p", { text: t("aWhy") }));
+  var box = el("div", { class: "stack" });
+  sh.appendChild(box);
+  var draw = function () {
+    box.innerHTML = "";
+    var segb = el("div", { class: "seg" }, [
+      el("button", { class: mode === "up" ? "on" : "", text: t("aSignup"), onclick: function () { mode = "up"; draw(); } }),
+      el("button", { class: mode === "in" ? "on" : "", text: t("aLogin"), onclick: function () { mode = "in"; draw(); } })]);
+    var u = el("input", { type: "text", placeholder: t("aUser"), autocapitalize: "off", autocomplete: "username", maxlength: "16" });
+    var p = el("input", { type: "password", placeholder: t("aPw"), autocomplete: mode === "up" ? "new-password" : "current-password", style: "width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--thin);background:var(--bg);color:var(--ink)" });
+    var go = el("button", { class: "btn pri block", text: mode === "up" ? t("aCreate") : t("aLogin") });
+    go.onclick = function () {
+      var n = u.value.trim(), pw = p.value;
+      if (!/^[A-Za-z0-9_]{3,16}$/.test(n)) { toast(t("aUserRule")); return; }
+      if (pw.length < 6) { toast(t("aWeak")); return; }
+      go.disabled = true;
+      (mode === "up" ? ACCT.signUp(n, pw) : ACCT.signIn(n, pw)).then(function () { location.reload(); }, function (e) { go.disabled = false; toast(authErr(e)); });
+    };
+    box.appendChild(segb); box.appendChild(u); box.appendChild(p); box.appendChild(go);
+    if (mode === "up") box.appendChild(el("p", { class: "legend", text: t("aPwNote") }));
+  };
+  draw();
+}
+var inviteShown = null;
+function renderInvite() {
+  var box = $("#invite");
+  if (!FR.inbox.length) { box.classList.add("hidden"); inviteShown = null; return; }
+  var it = FR.inbox[0]; inviteShown = it;
+  var nm = String(it.name || "?").slice(0, 30);
+  var txt = { coop: t("ivCoop", { n: nm }), race: t("ivRace", { n: nm }), puzzle: t("ivPuzzle", { n: nm }), help: t("ivHelp", { n: nm }), challenge: t("ivChal", { n: nm, t: fmt(it.ms || 0) }) }[it.type] || t("ivPuzzle", { n: nm });
+  var done = function () { ACCT.ack(it.id).catch(function () {}); FR.inbox.shift(); updateBadge(); renderInvite(); };
+  box.innerHTML = "";
+  box.appendChild(el("div", { class: "ivtext", text: txt }));
+  box.appendChild(el("div", { class: "row2" }, [
+    el("button", { class: "btn pri", text: it.type === "coop" || it.type === "race" ? t("ivJoin") : t("open"), onclick: function () { var code = it.code; done(); if (typeof code === "string") openCode(code); } }),
+    el("button", { class: "btn", text: t("ivLater"), onclick: done })]));
+  box.classList.remove("hidden");
+}
+
 // ---------------- banner ----------------
 function renderBanner() {
   var b = $("#banner"); b.innerHTML = "";
@@ -2170,6 +2570,7 @@ $("#bMenu").onclick = showMenu;
 $("#timerBtn").onclick = togglePause;
 $("#eStart").onclick = finishEntry; $("#eCancel").onclick = cancelEntry; $("#ePaste").onclick = pasteEntry;
 applyLang();
+initFriends();
 if (!checkHash()) {
   var cur = ls("sd.cur"), g = cur && loadSaved(cur);
   if (g) { setGame(g); if (g.done) $("#board").classList.add("win"); }
