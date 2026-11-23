@@ -999,7 +999,7 @@ en: {
   aWhy:"With an account you can add friends and invite them straight from the app — no links needed. Playing without an account still works.",
   aSignup:"Create account", aLogin:"Log in", aLogout:"Log out", aUser:"Username", aPw:"Password (min. 6 characters)", aCreate:"Create account",
   aPwNote:"Write your password down — it can't be reset.", aUserRule:"Username: 3–16 letters, numbers or _", aTaken:"That username is already taken.", aWeak:"The password needs at least 6 characters.",
-  aWrong:"Wrong username or password.", aNotEnabled:"Accounts aren't switched on in Firebase yet.", aOffline:"Can't reach the server right now.", aErr:"Something went wrong",
+  aWrong:"Wrong username or password.", aNotEnabled:"Accounts aren't switched on in Firebase yet.", aOffline:"Can't reach the server right now.", aErr:"Something went wrong", aRules:"The server refused (permission denied) — the Firebase database rules need updating.",
   ivCoop:"{n} invites you to solve a puzzle together", ivRace:"{n} challenges you to a live race", ivPuzzle:"{n} sent you a puzzle", ivHelp:"{n} is stuck and asks for your help", ivChal:"{n} challenges you: beat {t}!", ivJoin:"Join", ivLater:"Later", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
@@ -1063,7 +1063,7 @@ de: {
   aWhy:"Mit einem Konto kannst du Freunde hinzufügen und direkt aus der App einladen — ohne Links. Spielen ohne Konto geht weiterhin.",
   aSignup:"Konto erstellen", aLogin:"Anmelden", aLogout:"Abmelden", aUser:"Benutzername", aPw:"Passwort (mind. 6 Zeichen)", aCreate:"Konto erstellen",
   aPwNote:"Schreib dir dein Passwort auf — es kann nicht zurückgesetzt werden.", aUserRule:"Benutzername: 3–16 Buchstaben, Zahlen oder _", aTaken:"Dieser Benutzername ist schon vergeben.", aWeak:"Das Passwort braucht mindestens 6 Zeichen.",
-  aWrong:"Falscher Benutzername oder falsches Passwort.", aNotEnabled:"Konten sind in Firebase noch nicht eingeschaltet.", aOffline:"Der Server ist gerade nicht erreichbar.", aErr:"Etwas ist schiefgelaufen",
+  aWrong:"Falscher Benutzername oder falsches Passwort.", aNotEnabled:"Konten sind in Firebase noch nicht eingeschaltet.", aOffline:"Der Server ist gerade nicht erreichbar.", aErr:"Etwas ist schiefgelaufen", aRules:"Der Server hat abgelehnt (permission denied) — die Firebase-Datenbankregeln müssen aktualisiert werden.",
   ivCoop:"{n} lädt dich ein, gemeinsam ein Rätsel zu lösen", ivRace:"{n} fordert dich zu einem Live-Rennen heraus", ivPuzzle:"{n} hat dir ein Rätsel geschickt", ivHelp:"{n} kommt nicht weiter und bittet um Hilfe", ivChal:"{n} fordert dich heraus: Schlag {t}!", ivJoin:"Beitreten", ivLater:"Später", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
@@ -2438,6 +2438,7 @@ function authErr(e) {
   if (c === "auth/operation-not-allowed") return t("aNotEnabled");
   if (/wrong-password|invalid-credential|user-not-found|invalid-login/.test(c)) return t("aWrong");
   if (c === "offline" || c === "auth/network-request-failed") return t("aOffline");
+  if (/permission/i.test(c + " " + ((e && e.message) || ""))) return t("aRules");
   return t("aErr") + (c ? " (" + c + ")" : "");
 }
 function showFriends(keepScroll) {
