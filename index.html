@@ -183,6 +183,7 @@ td.n{text-align:right;font-variant-numeric:tabular-nums}
 .fhead .rmf{margin-left:auto;color:var(--muted);font-weight:700;padding:0 6px}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{font-size:13px;font-weight:600;padding:6px 10px;border-radius:99px;background:var(--panel);border:1px solid var(--thin)}
+.linkb{color:var(--accent);font-weight:700;font-size:14px;padding:6px 0;align-self:center}
 
 </style>
 </head>
@@ -788,7 +789,7 @@ window.FIREBASE_CONFIG = {"apiKey":"AIzaSyDk-yI_ShBp4CoVYgu1rbC9vNYKYVGCzc4","au
       DB = db; if (!db) return;
       var u = firebase.auth().currentUser;
       if (!u) return;
-      A.user = { uid: u.uid, name: u.displayName || (u.email || "").split("@")[0] };
+      A.user = { uid: u.uid, name: u.displayName || (u.email || "").split("@")[0], email: u.email || "", verified: !!u.emailVerified };
       db.ref(".info/connected").on("value", function (s) {
         if (!s.val()) return;
         var r = db.ref("status/" + u.uid);
@@ -797,14 +798,14 @@ window.FIREBASE_CONFIG = {"apiKey":"AIzaSyDk-yI_ShBp4CoVYgu1rbC9vNYKYVGCzc4","au
       });
     });
     A.available = function () { return !!DB; };
-    A.signUp = function (name, pw) {
+    A.signUp = function (name, email, pw) {
       var ln = String(name).toLowerCase(), user;
       return A.ready.then(function () {
         if (!DB) throw { code: "offline" };
         return DB.ref("usernames/" + ln).once("value");
       }).then(function (s) {
         if (s.exists()) throw { code: "taken" };
-        return firebase.auth().createUserWithEmailAndPassword(em(name), pw);
+        return firebase.auth().createUserWithEmailAndPassword(email, pw);
       }).then(function (cred) {
         user = cred.user;
         return DB.ref("usernames/" + ln).set(user.uid).catch(function () { return user.delete().then(function () { throw { code: "taken" }; }); });
@@ -812,9 +813,14 @@ window.FIREBASE_CONFIG = {"apiKey":"AIzaSyDk-yI_ShBp4CoVYgu1rbC9vNYKYVGCzc4","au
         return user.updateProfile({ displayName: name });
       }).then(function () {
         return Promise.all([DB.ref("users/" + user.uid + "/profile").set({ name: name }), DB.ref("names/" + user.uid).set(name)]);
+      }).then(function () {
+        try { return user.sendEmailVerification().catch(function () {}); } catch (e) {}
       });
     };
-    A.signIn = function (name, pw) { return A.ready.then(function () { if (!DB) throw { code: "offline" }; return firebase.auth().signInWithEmailAndPassword(em(name), pw); }); };
+    A.signIn = function (email, pw) { return A.ready.then(function () { if (!DB) throw { code: "offline" }; return firebase.auth().signInWithEmailAndPassword(email, pw); }); };
+    A.reset = function (email) { return A.ready.then(function () { return firebase.auth().sendPasswordResetEmail(email); }); };
+    A.resendVerify = function () { var u = firebase.auth().currentUser; return u ? u.sendEmailVerification() : Promise.resolve(); };
+    A.refreshVerified = function () { var u = firebase.auth().currentUser; if (!u) return Promise.resolve(false); return u.reload().then(function () { A.user.verified = !!firebase.auth().currentUser.emailVerified; return A.user.verified; }); };
     A.signOut = function () {
       var u = firebase.auth().currentUser;
       var p = u && DB ? DB.ref("status/" + u.uid).set({ on: false, at: TS() }).catch(function () {}) : Promise.resolve();
@@ -998,8 +1004,8 @@ en: {
   frNoGame:"Open a puzzle first.", frInvited:"Invite sent to {n}. Waiting for them…", frSentPuzzle:"Sent to {n}.", frOnline:"online", frOffline:"offline", frRemoveQ:"Remove {n} as a friend?", frRemove:"Remove",
   aWhy:"With an account you can add friends and invite them straight from the app — no links needed. Playing without an account still works.",
   aSignup:"Create account", aLogin:"Log in", aLogout:"Log out", aUser:"Username", aPw:"Password (min. 6 characters)", aCreate:"Create account",
-  aPwNote:"Write your password down — it can't be reset.", aUserRule:"Username: 3–16 letters, numbers or _", aTaken:"That username is already taken.", aWeak:"The password needs at least 6 characters.",
-  aWrong:"Wrong username or password.", aNotEnabled:"Accounts aren't switched on in Firebase yet.", aOffline:"Can't reach the server right now.", aErr:"Something went wrong", aRules:"The server refused (permission denied) — the Firebase database rules need updating.",
+  aUserRule:"Username: 3–16 letters, numbers or _", aTaken:"That username is already taken.", aWeak:"The password needs at least 6 characters.",
+  aWrong:"Wrong username or password.", aNotEnabled:"Accounts aren't switched on in Firebase yet.", aOffline:"Can't reach the server right now.", aErr:"Something went wrong", aEmail:"Email", aSignupNote:"Your username is what friends see and search for. You log in with your email. You can play right away — we'll send a short email to confirm your address.", aForgot:"Forgot password?", aForgotFirst:"Enter your email above first.", aResetSent:"We sent a link to reset your password to {e}. Check your spam folder too.", aEmailUsed:"There's already an account with this email — try logging in.", aEmailBad:"Please enter a valid email address.", aTooMany:"Too many attempts — please wait a few minutes.", aVerifyNote:"Please confirm your email ({e}) using the link we sent — otherwise password reset can't reach you.", aResend:"Send again", aResent:"Confirmation email sent.", aDidIt:"I confirmed it", aNotYet:"Not confirmed yet — check your inbox and spam folder.", aRules:"The server refused (permission denied) — the Firebase database rules need updating.",
   ivCoop:"{n} invites you to solve a puzzle together", ivRace:"{n} challenges you to a live race", ivPuzzle:"{n} sent you a puzzle", ivHelp:"{n} is stuck and asks for your help", ivChal:"{n} challenges you: beat {t}!", ivJoin:"Join", ivLater:"Later", noteTip:"Tip: this step crosses out candidates, so it works best with notes. “Do it for me” fills in all notes first."
 },
 de: {
@@ -1062,8 +1068,8 @@ de: {
   frNoGame:"Öffne zuerst ein Rätsel.", frInvited:"Einladung an {n} gesendet. Warte auf Antwort…", frSentPuzzle:"An {n} gesendet.", frOnline:"online", frOffline:"offline", frRemoveQ:"{n} als Freund entfernen?", frRemove:"Entfernen",
   aWhy:"Mit einem Konto kannst du Freunde hinzufügen und direkt aus der App einladen — ohne Links. Spielen ohne Konto geht weiterhin.",
   aSignup:"Konto erstellen", aLogin:"Anmelden", aLogout:"Abmelden", aUser:"Benutzername", aPw:"Passwort (mind. 6 Zeichen)", aCreate:"Konto erstellen",
-  aPwNote:"Schreib dir dein Passwort auf — es kann nicht zurückgesetzt werden.", aUserRule:"Benutzername: 3–16 Buchstaben, Zahlen oder _", aTaken:"Dieser Benutzername ist schon vergeben.", aWeak:"Das Passwort braucht mindestens 6 Zeichen.",
-  aWrong:"Falscher Benutzername oder falsches Passwort.", aNotEnabled:"Konten sind in Firebase noch nicht eingeschaltet.", aOffline:"Der Server ist gerade nicht erreichbar.", aErr:"Etwas ist schiefgelaufen", aRules:"Der Server hat abgelehnt (permission denied) — die Firebase-Datenbankregeln müssen aktualisiert werden.",
+  aUserRule:"Benutzername: 3–16 Buchstaben, Zahlen oder _", aTaken:"Dieser Benutzername ist schon vergeben.", aWeak:"Das Passwort braucht mindestens 6 Zeichen.",
+  aWrong:"Falscher Benutzername oder falsches Passwort.", aNotEnabled:"Konten sind in Firebase noch nicht eingeschaltet.", aOffline:"Der Server ist gerade nicht erreichbar.", aErr:"Etwas ist schiefgelaufen", aEmail:"E-Mail", aSignupNote:"Deinen Benutzernamen sehen und suchen deine Freunde. Anmelden tust du dich mit deiner E-Mail. Du kannst sofort spielen — wir schicken eine kurze E-Mail zur Bestätigung deiner Adresse.", aForgot:"Passwort vergessen?", aForgotFirst:"Gib zuerst oben deine E-Mail ein.", aResetSent:"Wir haben einen Link zum Zurücksetzen an {e} geschickt. Schau auch im Spam-Ordner nach.", aEmailUsed:"Mit dieser E-Mail gibt es schon ein Konto — versuch dich anzumelden.", aEmailBad:"Bitte gib eine gültige E-Mail-Adresse ein.", aTooMany:"Zu viele Versuche — bitte warte ein paar Minuten.", aVerifyNote:"Bitte bestätige deine E-Mail ({e}) über den Link, den wir geschickt haben — sonst kann dich „Passwort vergessen“ nicht erreichen.", aResend:"Nochmal senden", aResent:"Bestätigungs-E-Mail gesendet.", aDidIt:"Hab ich bestätigt", aNotYet:"Noch nicht bestätigt — schau in dein Postfach und den Spam-Ordner.", aRules:"Der Server hat abgelehnt (permission denied) — die Firebase-Datenbankregeln müssen aktualisiert werden.",
   ivCoop:"{n} lädt dich ein, gemeinsam ein Rätsel zu lösen", ivRace:"{n} fordert dich zu einem Live-Rennen heraus", ivPuzzle:"{n} hat dir ein Rätsel geschickt", ivHelp:"{n} kommt nicht weiter und bittet um Hilfe", ivChal:"{n} fordert dich heraus: Schlag {t}!", ivJoin:"Beitreten", ivLater:"Später", noteTip:"Tipp: Dieser Schritt streicht Kandidaten, das klappt am besten mit Notizen. „Für mich erledigen“ trägt zuerst alle Notizen ein."
 }};
 
@@ -2433,7 +2439,11 @@ function initFriends() {
 }
 function authErr(e) {
   var c = (e && e.code) || "";
-  if (c === "taken" || c === "auth/email-already-in-use") return t("aTaken");
+  if (c === "taken") return t("aTaken");
+  if (c === "auth/email-already-in-use") return t("aEmailUsed");
+  if (c === "auth/invalid-email" || c === "auth/missing-email") return t("aEmailBad");
+  if (c === "auth/too-many-requests") return t("aTooMany");
+  if (c === "auth/configuration-not-found") return t("aNotEnabled");
   if (c === "auth/weak-password") return t("aWeak");
   if (c === "auth/operation-not-allowed") return t("aNotEnabled");
   if (/wrong-password|invalid-credential|user-not-found|invalid-login/.test(c)) return t("aWrong");
@@ -2452,8 +2462,14 @@ function showFriends(keepScroll) {
     sh.appendChild(el("h2", { text: t("frTitle") }));
     if (!ACCT.available()) { sh.appendChild(el("p", { text: t("aOffline") })); return; }
     if (!ACCT.user) { authForm(sh); return; }
-    sh.appendChild(el("div", { class: "setrow" }, [el("span", { text: t("frSignedIn", { n: ACCT.user.name }) }),
+    sh.appendChild(el("div", { class: "setrow" }, [el("div", null, [el("div", { text: t("frSignedIn", { n: ACCT.user.name }) }), el("div", { class: "legend", text: ACCT.user.email })]),
       el("button", { class: "btn", text: t("aLogout"), onclick: function () { ACCT.signOut().then(function () { location.reload(); }); } })]));
+    if (!ACCT.user.verified) {
+      var vb = el("div", { class: "banner", style: "margin-top:8px;flex-wrap:wrap" }, [el("span", { text: "✉️ " + t("aVerifyNote", { e: ACCT.user.email }) })]);
+      vb.appendChild(el("button", { class: "btn", text: t("aResend"), onclick: function () { ACCT.resendVerify().then(function () { toast(t("aResent")); }, function (e) { toast(authErr(e)); }); } }));
+      vb.appendChild(el("button", { class: "btn", text: t("aDidIt"), onclick: function () { ACCT.refreshVerified().then(function (ok) { if (ok) showFriends(); else toast(t("aNotYet")); }); } }));
+      sh.appendChild(vb);
+    }
     // add friend
     sh.appendChild(el("h4", { text: t("frAdd") }));
     var inp = el("input", { type: "text", placeholder: t("aUser"), autocapitalize: "off", autocomplete: "off" });
@@ -2510,23 +2526,33 @@ function authForm(sh) {
   sh.appendChild(el("p", { text: t("aWhy") }));
   var box = el("div", { class: "stack" });
   sh.appendChild(box);
+  var field = function (type, ph, ac) { return el("input", { type: type, placeholder: ph, autocapitalize: "off", autocomplete: ac, style: "width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--thin);background:var(--bg);color:var(--ink)" }); };
   var draw = function () {
     box.innerHTML = "";
-    var segb = el("div", { class: "seg" }, [
+    box.appendChild(el("div", { class: "seg" }, [
       el("button", { class: mode === "up" ? "on" : "", text: t("aSignup"), onclick: function () { mode = "up"; draw(); } }),
-      el("button", { class: mode === "in" ? "on" : "", text: t("aLogin"), onclick: function () { mode = "in"; draw(); } })]);
-    var u = el("input", { type: "text", placeholder: t("aUser"), autocapitalize: "off", autocomplete: "username", maxlength: "16" });
-    var p = el("input", { type: "password", placeholder: t("aPw"), autocomplete: mode === "up" ? "new-password" : "current-password", style: "width:100%;font:inherit;padding:10px 12px;border-radius:10px;border:1px solid var(--thin);background:var(--bg);color:var(--ink)" });
+      el("button", { class: mode === "in" ? "on" : "", text: t("aLogin"), onclick: function () { mode = "in"; draw(); } })]));
+    var u = mode === "up" ? field("text", t("aUser"), "username") : null;
+    if (u) u.maxLength = 16;
+    var e = field("email", t("aEmail"), "email");
+    var p = field("password", t("aPw"), mode === "up" ? "new-password" : "current-password");
     var go = el("button", { class: "btn pri block", text: mode === "up" ? t("aCreate") : t("aLogin") });
     go.onclick = function () {
-      var n = u.value.trim(), pw = p.value;
-      if (!/^[A-Za-z0-9_]{3,16}$/.test(n)) { toast(t("aUserRule")); return; }
+      var em = e.value.trim(), pw = p.value;
+      if (mode === "up" && !/^[A-Za-z0-9_]{3,16}$/.test(u.value.trim())) { toast(t("aUserRule")); return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { toast(t("aEmailBad")); return; }
       if (pw.length < 6) { toast(t("aWeak")); return; }
       go.disabled = true;
-      (mode === "up" ? ACCT.signUp(n, pw) : ACCT.signIn(n, pw)).then(function () { location.reload(); }, function (e) { go.disabled = false; toast(authErr(e)); });
+      (mode === "up" ? ACCT.signUp(u.value.trim(), em, pw) : ACCT.signIn(em, pw)).then(function () { location.reload(); }, function (err) { go.disabled = false; toast(authErr(err)); });
     };
-    box.appendChild(segb); box.appendChild(u); box.appendChild(p); box.appendChild(go);
-    if (mode === "up") box.appendChild(el("p", { class: "legend", text: t("aPwNote") }));
+    if (u) box.appendChild(u);
+    box.appendChild(e); box.appendChild(p); box.appendChild(go);
+    if (mode === "up") box.appendChild(el("p", { class: "legend", text: t("aSignupNote") }));
+    else box.appendChild(el("button", { class: "linkb", text: t("aForgot"), onclick: function () {
+      var em = e.value.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) { toast(t("aForgotFirst")); e.focus(); return; }
+      ACCT.reset(em).then(function () { toast(t("aResetSent", { e: em })); }, function (err) { toast(authErr(err)); });
+    } }));
   };
   draw();
 }
