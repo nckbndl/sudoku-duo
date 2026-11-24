@@ -1413,7 +1413,7 @@ function buildBoard() {
   }
   var pad = $("#pad");
   for (d = 1; d <= 9; d++) {
-    pad.appendChild(el("button", { class: "num", "data-d": d, onclick: (function (dd) { return function () { padTap(dd); }; })(d) }, [String(d), el("small")]));
+    pad.appendChild(el("button", { class: "num", "data-d": d, onclick: (function (dd) { return function () { padTap(dd); }; })(d) }, [String(d)]));
   }
 }
 function curVal(i) { return G.giv[i] || G.vals[i]; }
@@ -1477,7 +1477,6 @@ function render() {
     b.classList.toggle("full", left <= 0 && !E && !S.hideDone);
     b.classList.toggle("gone", left <= 0 && !E && S.hideDone);
     b.classList.toggle("act", S.inputMode === "digit" && activeD === d);
-    b.lastChild.textContent = E || !S.padCounts ? "" : (left > 0 ? left : "");
   });
   $(".app").classList.toggle("notesmode", notesMode);
   $("#tNotes").classList.toggle("on", notesMode);
@@ -2064,7 +2063,6 @@ function showMore(scrollTo) {
     sh.appendChild(segRow(t("sNoteSize"), "noteSize", [["s", "S"], ["m", "M"], ["l", "L"]], refresh));
     sh.appendChild(segRow(t("sFont"), "font", [["sans", "Aa"], ["round", t("fRound")], ["serif", t("fSerif")], ["mono", "Mono"]], refresh));
     sh.appendChild(segRow(t("sPad"), "padLayout", [["row", "1–9"], ["grid", "3×3"]]));
-    sh.appendChild(toggleRow(t("sPadCounts"), "padCounts"));
     sh.appendChild(toggleRow(t("sHideDone"), "hideDone"));
     sh.appendChild(toggleRow(t("sTimer"), "showTimer"));
 
